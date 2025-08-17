@@ -1,7 +1,7 @@
 # RevloDB
 
 [![Super-Linter](https://github.com/chaitanyamand/RevloDB/actions/workflows/linter.yml/badge.svg)](https://github.com/chaitanyamand/RevloDB/actions/workflows/linter.yml)
-[![CodeQL](https://github.com/chaitanyamand/RevloDB/actions/workflows/codeql.yml/badge.svg)](https://github.com/chaitanyamand/RevloDB/actions/workflows/codeql.yml)
+[![CodeQL](https://github.com/chaitanyamand/RevloDB/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/chaitanyamand/RevloDB/actions/workflows/github-code-scanning/codeql)
 [![Reviewed by CodeRabbit](https://img.shields.io/badge/Reviewed%20by-CodeRabbit-0094F5?logo=coderabbit)](https://coderabbit.ai)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
