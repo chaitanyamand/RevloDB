@@ -53,6 +53,6 @@ This project is distributed under the MIT License. See `LICENSE.txt` for more in
 
 ## 📧 Contact
 
-Chaitanya Mandale - chaitanyam187@gmail.com
+Chaitanya Mandale - <chaitanyam187@gmail.com>
 
 Project Link: [https://github.com/chaitanyamand/RevloDB](https://github.com/chaitanyamand/RevloDB)

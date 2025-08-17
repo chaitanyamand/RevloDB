@@ -6,12 +6,12 @@ First off, thank you for considering contributing to RevloDB! We welcome any hel
 
 We use the standard GitHub **fork and pull request** workflow. If you're new to this, here's a quick guide.
 
-1.  **Fork the repository** to your own GitHub account.
-2.  **Clone your fork** to your local machine: `git clone https://github.com/YourUsername/RevloDB.git`
-3.  **Create a new branch** for your changes: `git checkout -b feature/MyNewFeature`
-4.  **Make your changes** and commit them with a clear, descriptive message.
-5.  **Push your branch** to your fork on GitHub: `git push origin feature/MyNewFeature`
-6.  **Open a Pull Request** from your branch to our `main` branch.
+1. **Fork the repository** to your own GitHub account.
+2. **Clone your fork** to your local machine: `git clone https://github.com/YourUsername/RevloDB.git`
+3. **Create a new branch** for your changes: `git checkout -b feature/MyNewFeature`
+4. **Make your changes** and commit them with a clear, descriptive message.
+5. **Push your branch** to your fork on GitHub: `git push origin feature/MyNewFeature`
+6. **Open a Pull Request** from your branch to our `main` branch.
 
 ## Code Quality and Style
 
