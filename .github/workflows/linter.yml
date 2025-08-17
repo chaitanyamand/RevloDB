@@ -22,6 +22,6 @@ jobs:
       - name: Run Super-Linter
         uses: github/super-linter@v6
         env:
-          CHECKOV_IGNORE_CHECKS: CKV2_GHA_1
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          LOG_LEVEL: debug
           DEFAULT_BRANCH: main
