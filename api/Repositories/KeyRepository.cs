@@ -92,13 +92,9 @@ namespace RevloDB.Repositories
         public async Task<bool> DeleteByNameAsync(string keyName)
         {
             var key = await _context.Keys
-                .Include(k => k.CurrentVersion)
                 .FirstOrDefaultAsync(k => k.KeyName == keyName);
 
             if (key == null) return false;
-
-            key.CurrentVersion = null;
-            await _context.SaveChangesAsync();
 
             _context.Keys.Remove(key);
             await _context.SaveChangesAsync();
