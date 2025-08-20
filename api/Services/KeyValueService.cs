@@ -52,83 +52,42 @@ namespace RevloDB.Services
 
         public async Task<KeyDto> CreateKeyAsync(CreateKeyDto createKeyDto)
         {
-            if (await _keyRepository.ExistsAsync(createKeyDto.KeyName))
-            {
-                throw new InvalidOperationException($"Key '{createKeyDto.KeyName}' already exists");
-            }
-
-            var key = new Key
-            {
-                KeyName = createKeyDto.KeyName,
-                CreatedAt = DateTime.UtcNow
-            };
-
-            key = await _keyRepository.CreateAsync(key);
-
-            var version = new Entities.Version
-            {
-                KeyId = key.Id,
-                Value = createKeyDto.Value,
-                VersionNumber = 1,
-                Timestamp = DateTime.UtcNow
-            };
-
-            version = await _versionRepository.CreateAsync(version);
-
-            key.CurrentVersionId = version.Id;
-            await _keyRepository.UpdateAsync(key);
+            var key = await _keyRepository.CreateKeyWithVersionAsync(
+                createKeyDto.KeyName,
+                createKeyDto.Value
+            );
 
             return new KeyDto
             {
                 Id = key.Id,
                 KeyName = key.KeyName,
-                CurrentValue = version.Value,
-                CurrentVersionNumber = version.VersionNumber,
+                CurrentValue = key.CurrentVersion?.Value,
+                CurrentVersionNumber = key.CurrentVersion?.VersionNumber,
                 CreatedAt = key.CreatedAt
             };
         }
 
         public async Task<KeyDto> UpdateKeyAsync(string keyName, UpdateKeyDto updateKeyDto)
         {
-            var key = await _keyRepository.GetByNameAsync(keyName);
-            if (key == null)
-            {
-                throw new KeyNotFoundException($"Key '{keyName}' not found");
-            }
-
-            var nextVersionNumber = await _versionRepository.GetNextVersionNumberAsync(key.Id);
-            var newVersion = new Entities.Version
-            {
-                KeyId = key.Id,
-                Value = updateKeyDto.Value,
-                VersionNumber = nextVersionNumber,
-                Timestamp = DateTime.UtcNow
-            };
-
-            newVersion = await _versionRepository.CreateAsync(newVersion);
-
-            key.CurrentVersionId = newVersion.Id;
-            await _keyRepository.UpdateAsync(key);
+            var updatedKey = await _keyRepository.AddNewVersionAsync(keyName, updateKeyDto.Value);
 
             return new KeyDto
             {
-                Id = key.Id,
-                KeyName = key.KeyName,
-                CurrentValue = newVersion.Value,
-                CurrentVersionNumber = newVersion.VersionNumber,
-                CreatedAt = key.CreatedAt
+                Id = updatedKey.Id,
+                KeyName = updatedKey.KeyName,
+                CurrentValue = updatedKey.CurrentVersion?.Value,
+                CurrentVersionNumber = updatedKey.CurrentVersion?.VersionNumber,
+                CreatedAt = updatedKey.CreatedAt
             };
         }
 
         public async Task DeleteKeyAsync(string keyName)
         {
-            var key = await _keyRepository.GetByNameAsync(keyName);
-            if (key == null)
+            var deleted = await _keyRepository.DeleteByNameAsync(keyName);
+            if (!deleted)
             {
                 throw new KeyNotFoundException($"Key '{keyName}' not found");
             }
-
-            await _keyRepository.DeleteAsync(key.Id);
         }
 
         public async Task<IEnumerable<VersionDto>> GetKeyHistoryAsync(string keyName)
@@ -160,10 +119,5 @@ namespace RevloDB.Services
 
             return version?.Value;
         }
-    }
-
-    public class KeyNotFoundException : Exception
-    {
-        public KeyNotFoundException(string message) : base(message) { }
     }
 }

@@ -15,40 +15,44 @@ namespace RevloDB.Repositories
 
         public async Task<Entities.Version?> GetByIdAsync(int id)
         {
-            return await _context.Versions.FindAsync(id);
+            try
+            {
+                return await _context.Versions.FindAsync(id);
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Failed to retrieve version with id '{id}': {ex.Message}", ex);
+            }
         }
 
         public async Task<IEnumerable<Entities.Version>> GetVersionsByKeyIdAsync(int keyId)
         {
-            return await _context.Versions
-                .Where(v => v.KeyId == keyId)
-                .OrderByDescending(v => v.VersionNumber)
-                .ToListAsync();
+            try
+            {
+                return await _context.Versions
+                    .Where(v => v.KeyId == keyId)
+                    .OrderByDescending(v => v.VersionNumber)
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Failed to retrieve versions for key id '{keyId}': {ex.Message}", ex);
+            }
         }
 
         public async Task<Entities.Version?> GetLatestVersionByKeyIdAsync(int keyId)
         {
-            return await _context.Versions
-                .Where(v => v.KeyId == keyId)
-                .OrderByDescending(v => v.VersionNumber)
-                .FirstOrDefaultAsync();
-        }
-
-        public async Task<Entities.Version> CreateAsync(Entities.Version version)
-        {
-            version.Timestamp = DateTime.UtcNow;
-            _context.Versions.Add(version);
-            await _context.SaveChangesAsync();
-            return version;
-        }
-
-        public async Task<int> GetNextVersionNumberAsync(int keyId)
-        {
-            var maxVersion = await _context.Versions
-                .Where(v => v.KeyId == keyId)
-                .MaxAsync(v => (int?)v.VersionNumber);
-
-            return (maxVersion ?? 0) + 1;
+            try
+            {
+                return await _context.Versions
+                    .Where(v => v.KeyId == keyId)
+                    .OrderByDescending(v => v.VersionNumber)
+                    .FirstOrDefaultAsync();
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Failed to retrieve latest version for key id '{keyId}': {ex.Message}", ex);
+            }
         }
     }
 }

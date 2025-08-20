@@ -38,6 +38,10 @@ namespace RevloDB.Data
             {
                 entity.ToTable("versions");
 
+                entity.HasIndex(v => new { v.KeyId, v.VersionNumber })
+                      .IsUnique()
+                      .HasDatabaseName("ix_versions_key_id_version_number");
+
                 entity.Property(v => v.Id).HasColumnName("id");
                 entity.Property(v => v.Value).HasColumnName("value");
                 entity.Property(v => v.Timestamp).HasColumnName("timestamp");

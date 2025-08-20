@@ -21,7 +21,8 @@ namespace RevloDB.Extensions
 
             services.AddDbContext<RevloDbContext>((serviceProvider, options) =>
             {
-                var connectionString = configuration.GetConnectionString("DefaultConnection");
+                var connectionString = configuration.GetConnectionString("DefaultConnection")
+                    ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
                 var databaseOptions = serviceProvider.GetRequiredService<IOptions<DatabaseOptions>>().Value;
 
                 options.UseNpgsql(connectionString, npgsqlOptions =>

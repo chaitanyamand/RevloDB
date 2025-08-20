@@ -40,9 +40,6 @@ namespace RevloDB.Services
             }
 
             var connectionString = _configuration.GetConnectionString("DefaultConnection")!;
-
-            using var scope = _serviceProvider.CreateScope();
-
             var retryCount = 0;
             var maxRetries = _databaseOptions.RetryOnFailure ? _databaseOptions.MaxRetryCount : 1;
 
@@ -50,6 +47,7 @@ namespace RevloDB.Services
             {
                 try
                 {
+                    using var scope = _serviceProvider.CreateScope();
                     await InitializeDatabaseInternalAsync(connectionString, scope);
                     return; // Success, exit retry loop
                 }
@@ -73,9 +71,12 @@ namespace RevloDB.Services
         private async Task InitializeDatabaseInternalAsync(string connectionString, IServiceScope scope)
         {
             var connectionStringBuilder = new NpgsqlConnectionStringBuilder(connectionString);
-            var databaseName = connectionStringBuilder.Database ?? "revlodb";
-            var masterConnectionString = connectionStringBuilder.ToString()
-                .Replace($"Database={databaseName}", "Database=postgres");
+            var databaseName = string.IsNullOrWhiteSpace(connectionStringBuilder.Database) ? "revlodb" : connectionStringBuilder.Database;
+            var masterBuilder = new NpgsqlConnectionStringBuilder(connectionStringBuilder.ConnectionString)
+            {
+                Database = "postgres"
+            };
+            var masterConnectionString = masterBuilder.ConnectionString;
 
             _logger.LogInformation("Checking if database '{DatabaseName}' exists...", databaseName);
 
@@ -97,12 +98,20 @@ namespace RevloDB.Services
 
         private async Task EnsureDatabaseExistsAsync(string masterConnectionString, string databaseName)
         {
+            if (string.IsNullOrWhiteSpace(databaseName) || databaseName.Contains(';') || databaseName.Contains('\''))
+            {
+                var ex = new ArgumentException($"Invalid database name: {databaseName}");
+                _logger.LogError(ex, "Database name validation failed.");
+                throw ex;
+            }
+
             try
             {
                 using var connection = new NpgsqlConnection(masterConnectionString);
                 await connection.OpenAsync();
 
-                using var command = new NpgsqlCommand($"SELECT 1 FROM pg_database WHERE datname = '{databaseName}'", connection);
+                using var command = new NpgsqlCommand("SELECT 1 FROM pg_database WHERE datname = @name", connection);
+                command.Parameters.AddWithValue("name", databaseName);
                 command.CommandTimeout = _databaseOptions.CommandTimeout;
                 var exists = await command.ExecuteScalarAsync();
 
@@ -110,7 +119,10 @@ namespace RevloDB.Services
                 {
                     _logger.LogInformation("Database '{DatabaseName}' does not exist. Creating it...", databaseName);
 
-                    using var createCommand = new NpgsqlCommand($"CREATE DATABASE \"{databaseName}\"", connection);
+                    var builder = new NpgsqlCommandBuilder();
+                    string quotedDatabaseName = builder.QuoteIdentifier(databaseName);
+
+                    using var createCommand = new NpgsqlCommand($"CREATE DATABASE {quotedDatabaseName}", connection);
                     createCommand.CommandTimeout = _databaseOptions.CommandTimeout;
                     await createCommand.ExecuteNonQueryAsync();
 

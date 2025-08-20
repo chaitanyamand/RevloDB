@@ -1,4 +1,5 @@
 using RevloDB.Entities;
+using Version = RevloDB.Entities.Version;
 
 namespace RevloDB.Repositories.Interfaces
 {
@@ -7,9 +8,9 @@ namespace RevloDB.Repositories.Interfaces
         Task<Key?> GetByIdAsync(int id);
         Task<Key?> GetByNameAsync(string keyName);
         Task<IEnumerable<Key>> GetAllAsync();
-        Task<Key> CreateAsync(Key key);
-        Task<Key> UpdateAsync(Key key);
-        Task DeleteAsync(int id);
+        Task<bool> DeleteByNameAsync(string keyName);
         Task<bool> ExistsAsync(string keyName);
+        Task<Key> CreateKeyWithVersionAsync(string keyName, string value);
+        Task<Key> AddNewVersionAsync(string keyName, string value);
     }
 }
