@@ -15,44 +15,27 @@ namespace RevloDB.Repositories
 
         public async Task<Entities.Version?> GetByIdAsync(int id)
         {
-            try
-            {
-                return await _context.Versions.FindAsync(id);
-            }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException($"Failed to retrieve version with id '{id}'", ex);
-            }
+            return await _context.Versions
+                .AsNoTracking()
+                .FirstOrDefaultAsync(v => v.Id == id);
         }
 
         public async Task<IEnumerable<Entities.Version>> GetVersionsByKeyIdAsync(int keyId)
         {
-            try
-            {
-                return await _context.Versions
-                    .Where(v => v.KeyId == keyId)
-                    .OrderByDescending(v => v.VersionNumber)
-                    .ToListAsync();
-            }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException($"Failed to retrieve versions for key id '{keyId}'", ex);
-            }
+            return await _context.Versions
+                .AsNoTracking()
+                .Where(v => v.KeyId == keyId)
+                .OrderByDescending(v => v.VersionNumber)
+                .ToListAsync();
         }
 
         public async Task<Entities.Version?> GetLatestVersionByKeyIdAsync(int keyId)
         {
-            try
-            {
-                return await _context.Versions
-                    .Where(v => v.KeyId == keyId)
-                    .OrderByDescending(v => v.VersionNumber)
-                    .FirstOrDefaultAsync();
-            }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException($"Failed to retrieve latest version for key id '{keyId}'", ex);
-            }
+            return await _context.Versions
+                .AsNoTracking()
+                .Where(v => v.KeyId == keyId)
+                .OrderByDescending(v => v.VersionNumber)
+                .FirstOrDefaultAsync();
         }
     }
 }

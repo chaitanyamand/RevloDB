@@ -63,30 +63,18 @@ namespace RevloDB.Repositories
 
         public async Task<Key?> GetByIdAsync(int id)
         {
-            try
-            {
-                return await _context.Keys
-                    .Include(k => k.CurrentVersion)
-                    .FirstOrDefaultAsync(k => k.Id == id);
-            }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException($"Failed to retrieve key with id '{id}'", ex);
-            }
+            return await _context.Keys
+                .AsNoTracking()
+                .Include(k => k.CurrentVersion)
+                .FirstOrDefaultAsync(k => k.Id == id);
         }
 
         public async Task<Key?> GetByNameAsync(string keyName)
         {
-            try
-            {
-                return await _context.Keys
-                    .Include(k => k.CurrentVersion)
-                    .FirstOrDefaultAsync(k => k.KeyName == keyName);
-            }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException($"Failed to retrieve key '{keyName}'", ex);
-            }
+            return await _context.Keys
+                .AsNoTracking()
+                .Include(k => k.CurrentVersion)
+                .FirstOrDefaultAsync(k => k.KeyName == keyName);
         }
 
         public async Task<bool> DeleteByNameAsync(string keyName)
@@ -104,16 +92,10 @@ namespace RevloDB.Repositories
 
         public async Task<IEnumerable<Key>> GetAllAsync()
         {
-            try
-            {
-                return await _context.Keys
-                    .Include(k => k.CurrentVersion)
-                    .ToListAsync();
-            }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException($"Failed to retrieve keys", ex);
-            }
+            return await _context.Keys
+                .AsNoTracking()
+                .Include(k => k.CurrentVersion)
+                .ToListAsync();
         }
 
         public async Task<Key> AddNewVersionAsync(string keyName, string value)
@@ -160,23 +142,18 @@ namespace RevloDB.Repositories
                 await transaction.RollbackAsync();
                 throw new InvalidOperationException("Concurrency conflict: The key was updated by another operation. Please try again.");
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 await transaction.RollbackAsync();
-                throw new InvalidOperationException($"Failed to add new version to key '{keyName}'", ex);
+                throw;
             }
         }
 
         public async Task<bool> ExistsAsync(string keyName)
         {
-            try
-            {
-                return await _context.Keys.AnyAsync(k => k.KeyName == keyName);
-            }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException($"Failed to check if key '{keyName}' exists", ex);
-            }
+            return await _context.Keys
+                .AsNoTracking()
+                .AnyAsync(k => k.KeyName == keyName);
         }
     }
 }
