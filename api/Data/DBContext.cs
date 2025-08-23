@@ -21,6 +21,9 @@ namespace RevloDB.Data
             {
                 entity.ToTable("keys");
 
+                entity.HasIndex(k => k.CurrentVersionId)
+                      .HasDatabaseName("ix_keys_current_version_id");
+
                 entity.HasIndex(k => k.KeyName)
                       .IsUnique()
                       .HasDatabaseName("ix_keys_key_name");

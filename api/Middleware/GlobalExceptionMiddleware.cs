@@ -1,5 +1,8 @@
 using System.Net;
 using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
+using Npgsql;
+using Microsoft.AspNetCore.Mvc;
 
 namespace RevloDB.Middleware
 {
@@ -22,8 +25,46 @@ namespace RevloDB.Middleware
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "An unhandled exception occurred: {Message}", ex.Message);
+                LogExceptionConcisely(context, ex);
                 await HandleExceptionAsync(context, ex);
+            }
+        }
+
+        private void LogExceptionConcisely(HttpContext context, Exception exception)
+        {
+            var method = context.Request.Method;
+            var path = context.Request.Path;
+
+            switch (exception)
+            {
+                case KeyNotFoundException keyNotFoundEx:
+                    _logger.LogError("{Method} {Path} - Key not found: {Message}",
+                        method, path, keyNotFoundEx.Message);
+                    break;
+
+                case DbUpdateException dbUpdateEx when dbUpdateEx.InnerException is PostgresException postgresEx && postgresEx.SqlState == "23505":
+                    _logger.LogError("{Method} {Path} - Duplicate key conflict", method, path);
+                    break;
+
+                case ArgumentException argEx:
+                    _logger.LogError("{Method} {Path} - Invalid argument: {Message}",
+                        method, path, argEx.Message);
+                    break;
+
+                case InvalidOperationException invalidOpEx:
+                    _logger.LogError("{Method} {Path} - Invalid operation: {Message}",
+                        method, path, invalidOpEx.Message);
+                    break;
+
+                default:
+                    _logger.LogError("{Method} {Path} - Unexpected error: {ExceptionType} - {Message}",
+                        method, path, exception.GetType().Name, exception.Message);
+
+                    if (_logger.IsEnabled(LogLevel.Debug))
+                    {
+                        _logger.LogDebug("Stack trace: {StackTrace}", exception.StackTrace);
+                    }
+                    break;
             }
         }
 
@@ -31,43 +72,47 @@ namespace RevloDB.Middleware
         {
             context.Response.ContentType = "application/json";
 
-            var response = exception switch
+            var problemDetails = new ProblemDetails
             {
-                KeyNotFoundException keyNotFound => new
-                {
-                    message = keyNotFound.Message,
-                    statusCode = (int)HttpStatusCode.NotFound,
-                    type = "KeyNotFound"
-                },
-                InvalidOperationException invalidOp when invalidOp.Message.Contains("already exists") => new
-                {
-                    message = invalidOp.Message,
-                    statusCode = (int)HttpStatusCode.Conflict,
-                    type = "Conflict"
-                },
-                InvalidOperationException invalidOp => new
-                {
-                    message = invalidOp.Message,
-                    statusCode = (int)HttpStatusCode.InternalServerError,
-                    type = "InternalServerError"
-                },
-                ArgumentException argEx => new
-                {
-                    message = argEx.Message,
-                    statusCode = (int)HttpStatusCode.BadRequest,
-                    type = "BadRequest"
-                },
-                _ => new
-                {
-                    message = "An internal server error occurred",
-                    statusCode = (int)HttpStatusCode.InternalServerError,
-                    type = "InternalServerError"
-                }
+                Instance = context.Request.Path,
+                Status = (int)HttpStatusCode.InternalServerError,
+                Title = "An internal server error occurred."
             };
 
-            context.Response.StatusCode = response.statusCode;
+            switch (exception)
+            {
+                case KeyNotFoundException keyNotFoundEx:
+                    problemDetails.Status = (int)HttpStatusCode.NotFound;
+                    problemDetails.Title = "Not Found";
+                    problemDetails.Detail = keyNotFoundEx.Message;
+                    break;
 
-            var jsonResponse = JsonSerializer.Serialize(response, new JsonSerializerOptions
+                case DbUpdateException dbUpdateEx when dbUpdateEx.InnerException is PostgresException postgresEx && postgresEx.SqlState == "23505":
+                    problemDetails.Status = (int)HttpStatusCode.Conflict;
+                    problemDetails.Title = "Conflict";
+                    problemDetails.Detail = "A key with the same name already exists.";
+                    break;
+
+                case ArgumentException argEx:
+                    problemDetails.Status = (int)HttpStatusCode.BadRequest;
+                    problemDetails.Title = "Bad Request";
+                    problemDetails.Detail = argEx.Message;
+                    break;
+
+                case InvalidOperationException invalidOpEx:
+                    problemDetails.Status = (int)HttpStatusCode.BadRequest;
+                    problemDetails.Title = "Bad Request";
+                    problemDetails.Detail = invalidOpEx.Message;
+                    break;
+
+                default:
+                    problemDetails.Detail = "An unexpected error occurred.";
+                    break;
+            }
+
+            context.Response.StatusCode = problemDetails.Status.Value;
+
+            var jsonResponse = JsonSerializer.Serialize(problemDetails, new JsonSerializerOptions
             {
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase
             });
