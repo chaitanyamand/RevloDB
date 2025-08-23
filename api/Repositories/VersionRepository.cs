@@ -21,7 +21,7 @@ namespace RevloDB.Repositories
             }
             catch (Exception ex)
             {
-                throw new InvalidOperationException($"Failed to retrieve version with id '{id}': {ex.Message}", ex);
+                throw new InvalidOperationException($"Failed to retrieve version with id '{id}'", ex);
             }
         }
 
@@ -36,7 +36,7 @@ namespace RevloDB.Repositories
             }
             catch (Exception ex)
             {
-                throw new InvalidOperationException($"Failed to retrieve versions for key id '{keyId}': {ex.Message}", ex);
+                throw new InvalidOperationException($"Failed to retrieve versions for key id '{keyId}'", ex);
             }
         }
 
@@ -51,7 +51,7 @@ namespace RevloDB.Repositories
             }
             catch (Exception ex)
             {
-                throw new InvalidOperationException($"Failed to retrieve latest version for key id '{keyId}': {ex.Message}", ex);
+                throw new InvalidOperationException($"Failed to retrieve latest version for key id '{keyId}'", ex);
             }
         }
     }

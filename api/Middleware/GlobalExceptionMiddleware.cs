@@ -25,7 +25,7 @@ namespace RevloDB.Middleware
             }
             catch (Exception ex)
             {
-                LogExceptionConcisely(context, ex);
+                LogException(context, ex);
                 await HandleExceptionAsync(context, ex);
             }
         }
@@ -56,7 +56,6 @@ namespace RevloDB.Middleware
             return "[" + trimmed + "]";
         }
 
-        [return: System.Diagnostics.CodeAnalysis.NotNull]
         private static string SanitizeForLogging(string input)
         {
             if (string.IsNullOrEmpty(input))
@@ -71,7 +70,7 @@ namespace RevloDB.Middleware
             return System.Text.RegularExpressions.Regex.Replace(sanitized, @"[\x00-\x1F\x7F]", "_");
         }
 
-        private void LogExceptionConcisely(HttpContext context, Exception exception)
+        private void LogException(HttpContext context, Exception exception)
         {
             var method = SanitizeForLogging(GetSafeHttpMethod(context.Request.Method));
             var path = SanitizeForLogging(GetSafePath(context.Request.Path));
@@ -111,6 +110,10 @@ namespace RevloDB.Middleware
 
         private static async Task HandleExceptionAsync(HttpContext context, Exception exception)
         {
+            if (context.Response.HasStarted)
+            {
+                return;
+            }
             context.Response.ContentType = "application/json";
 
             var problemDetails = new ProblemDetails
@@ -138,6 +141,14 @@ namespace RevloDB.Middleware
                     problemDetails.Status = (int)HttpStatusCode.BadRequest;
                     problemDetails.Title = "Bad Request";
                     problemDetails.Detail = argEx.Message;
+                    break;
+
+                case InvalidOperationException invalidOpEx
+                   when invalidOpEx.Message.StartsWith("Concurrency conflict", StringComparison.OrdinalIgnoreCase)
+                      || invalidOpEx.Message.Contains("already exists", StringComparison.OrdinalIgnoreCase):
+                    problemDetails.Status = (int)HttpStatusCode.Conflict;
+                    problemDetails.Title = "Conflict";
+                    problemDetails.Detail = invalidOpEx.Message;
                     break;
 
                 case InvalidOperationException invalidOpEx:

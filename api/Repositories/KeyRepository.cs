@@ -71,7 +71,7 @@ namespace RevloDB.Repositories
             }
             catch (Exception ex)
             {
-                throw new InvalidOperationException($"Failed to retrieve key with id '{id}': {ex.Message}", ex);
+                throw new InvalidOperationException($"Failed to retrieve key with id '{id}'", ex);
             }
         }
 
@@ -85,7 +85,7 @@ namespace RevloDB.Repositories
             }
             catch (Exception ex)
             {
-                throw new InvalidOperationException($"Failed to retrieve key '{keyName}': {ex.Message}", ex);
+                throw new InvalidOperationException($"Failed to retrieve key '{keyName}'", ex);
             }
         }
 
@@ -112,7 +112,7 @@ namespace RevloDB.Repositories
             }
             catch (Exception ex)
             {
-                throw new InvalidOperationException($"Failed to retrieve keys: {ex.Message}", ex);
+                throw new InvalidOperationException($"Failed to retrieve keys", ex);
             }
         }
 
@@ -163,7 +163,7 @@ namespace RevloDB.Repositories
             catch (Exception ex)
             {
                 await transaction.RollbackAsync();
-                throw new InvalidOperationException($"Failed to add new version to key '{keyName}': {ex.Message}", ex);
+                throw new InvalidOperationException($"Failed to add new version to key '{keyName}'", ex);
             }
         }
 
@@ -175,7 +175,7 @@ namespace RevloDB.Repositories
             }
             catch (Exception ex)
             {
-                throw new InvalidOperationException($"Failed to check if key '{keyName}' exists: {ex.Message}", ex);
+                throw new InvalidOperationException($"Failed to check if key '{keyName}' exists", ex);
             }
         }
     }
