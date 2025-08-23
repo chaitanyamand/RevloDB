@@ -18,8 +18,8 @@ namespace RevloDB.DTOs
         [MaxLength(100, ErrorMessage = "Key name cannot exceed 100 characters")]
         public string KeyName { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "The value is required.")]
-        [StringLength(1000, MinimumLength = 1, ErrorMessage = "The value cannot be empty.")]
+        [Required(ErrorMessage = "Value is required")]
+        [StringLength(1000, MinimumLength = 1, ErrorMessage = "Value cannot be empty")]
         public string Value { get; set; } = string.Empty;
     }
 
