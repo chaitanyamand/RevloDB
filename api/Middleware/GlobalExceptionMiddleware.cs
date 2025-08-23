@@ -52,7 +52,8 @@ namespace RevloDB.Middleware
 
             var safePath = new string(path.Where(c => !char.IsControl(c)).ToArray());
 
-            return safePath.Length > 100 ? safePath.Substring(0, 100) + "..." : safePath;
+            var trimmed = safePath.Length > 100 ? safePath.Substring(0, 100) + "..." : safePath;
+            return "[" + trimmed + "]";
         }
 
         [return: System.Diagnostics.CodeAnalysis.NotNull]
@@ -72,36 +73,31 @@ namespace RevloDB.Middleware
 
         private void LogExceptionConcisely(HttpContext context, Exception exception)
         {
-            var method = GetSafeHttpMethod(context.Request.Method);
-            var path = GetSafePath(context.Request.Path);
+            var method = SanitizeForLogging(GetSafeHttpMethod(context.Request.Method));
+            var path = SanitizeForLogging(GetSafePath(context.Request.Path));
 
             switch (exception)
             {
                 case KeyNotFoundException keyNotFoundEx:
-                    // codeql[cs/log-injection] User input is sanitized using GetSafeHttpMethod and GetSafePath
                     _logger.LogError("{Method} {Path} - Key not found: {Message}",
                         method, path, keyNotFoundEx.Message);
                     break;
 
                 case DbUpdateException dbUpdateEx when dbUpdateEx.InnerException is PostgresException postgresEx && postgresEx.SqlState == "23505":
-                    // codeql[cs/log-injection] User input is sanitized using GetSafeHttpMethod and GetSafePath
                     _logger.LogError("{Method} {Path} - Duplicate key conflict", method, path);
                     break;
 
                 case ArgumentException argEx:
-                    // codeql[cs/log-injection] User input is sanitized using GetSafeHttpMethod and GetSafePath
                     _logger.LogError("{Method} {Path} - Invalid argument: {Message}",
                         method, path, argEx.Message);
                     break;
 
                 case InvalidOperationException invalidOpEx:
-                    // codeql[cs/log-injection] User input is sanitized using GetSafeHttpMethod and GetSafePath
                     _logger.LogError("{Method} {Path} - Invalid operation: {Message}",
                         method, path, invalidOpEx.Message);
                     break;
 
                 default:
-                    // codeql[cs/log-injection] User input is sanitized using GetSafeHttpMethod and GetSafePath
                     _logger.LogError("{Method} {Path} - Unexpected error: {ExceptionType} - {Message}",
                         method, path, exception.GetType().Name, exception.Message);
 
