@@ -30,22 +30,52 @@ namespace RevloDB.Middleware
             }
         }
 
+        private static string GetSafeHttpMethod(string method)
+        {
+            return method switch
+            {
+                "GET" => "GET",
+                "POST" => "POST",
+                "PUT" => "PUT",
+                "DELETE" => "DELETE",
+                "PATCH" => "PATCH",
+                "HEAD" => "HEAD",
+                "OPTIONS" => "OPTIONS",
+                _ => "UNKNOWN"
+            };
+        }
+
+        // Safe path sanitization
+        private static string GetSafePath(string path)
+        {
+            if (string.IsNullOrEmpty(path))
+                return "/unknown";
+
+            // Create a completely new string to break CodeQL tracking
+            var safePath = new string(path.Where(c => !char.IsControl(c)).ToArray());
+
+            return safePath.Length > 100 ? safePath.Substring(0, 100) + "..." : safePath;
+        }
+
+        [return: System.Diagnostics.CodeAnalysis.NotNull]
         private static string SanitizeForLogging(string input)
         {
             if (string.IsNullOrEmpty(input))
-                return input;
+                return string.Empty;
 
-            return input
+            var sanitized = input
                 .Replace('\n', '_')
                 .Replace('\r', '_')
                 .Replace('\t', ' ')
                 .Replace('\0', '_');
+
+            return System.Text.RegularExpressions.Regex.Replace(sanitized, @"[\x00-\x1F\x7F]", "_");
         }
 
         private void LogExceptionConcisely(HttpContext context, Exception exception)
         {
-            var method = SanitizeForLogging(context.Request.Method);
-            var path = SanitizeForLogging(context.Request.Path);
+            var method = GetSafeHttpMethod(context.Request.Method);
+            var path = GetSafePath(context.Request.Path);
 
             switch (exception)
             {
