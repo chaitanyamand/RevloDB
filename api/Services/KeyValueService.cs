@@ -1,5 +1,4 @@
 using RevloDB.DTOs;
-using RevloDB.Entities;
 using RevloDB.Repositories.Interfaces;
 using RevloDB.Services.Interfaces;
 
@@ -131,7 +130,7 @@ namespace RevloDB.Services
 
         public async Task<KeyDto> RevertKeyAsync(RevertKeyDto revertKeyDto)
         {
-            var revertedKey = await _keyRepository.RevertToVersionAsync(revertKeyDto.KeyName, revertKeyDto.VersionNumber);
+            var revertedKey = await _keyRepository.RevertToVersionAsync(revertKeyDto.KeyName, revertKeyDto.VersionNumber!.Value);
 
             return new KeyDto
             {

@@ -15,19 +15,19 @@ namespace RevloDB.Repositories
             _logger = logger;
         }
 
-        public async Task<int> GetMarkedKeysCountAsync()
+        public async Task<int> GetMarkedKeysCountAsync(CancellationToken cancellationToken = default)
         {
-            return await _context.Keys.CountAsync(k => k.IsDeleted);
+            return await _context.Keys.CountAsync(k => k.IsDeleted, cancellationToken);
         }
 
-        public async Task<int> DeleteMarkedKeysAsync()
+        public async Task<int> DeleteMarkedKeysAsync(CancellationToken cancellationToken = default)
         {
             await _context.Keys
                 .Where(k => k.IsDeleted)
-                .ExecuteUpdateAsync(s => s.SetProperty(k => k.CurrentVersionId, k => null));
+                .ExecuteUpdateAsync(s => s.SetProperty(k => k.CurrentVersionId, k => null), cancellationToken);
             var deletedCount = await _context.Keys
                 .Where(k => k.IsDeleted)
-                .ExecuteDeleteAsync();
+                .ExecuteDeleteAsync(cancellationToken);
 
             _logger.LogDebug("Deleted {Count} keys with their versions", deletedCount);
 

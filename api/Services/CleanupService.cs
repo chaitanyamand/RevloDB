@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using RevloDB.Repositories.Interfaces;
+using RevloDB.Services.Interfaces;
 
 namespace RevloDB.Services
 {
@@ -14,13 +15,13 @@ namespace RevloDB.Services
             _logger = logger;
         }
 
-        public async Task<CleanupResult> ExecuteCleanupAsync()
+        public async Task<CleanupResult> ExecuteCleanupAsync(CancellationToken cancellationToken = default)
         {
             var stopwatch = Stopwatch.StartNew();
 
             try
             {
-                var initialCount = await _cleanupRepository.GetMarkedKeysCountAsync();
+                var initialCount = await _cleanupRepository.GetMarkedKeysCountAsync(cancellationToken);
                 _logger.LogInformation("Starting cleanup. Found {Count} keys marked for deletion", initialCount);
 
                 if (initialCount == 0)
@@ -33,7 +34,7 @@ namespace RevloDB.Services
                     };
                 }
 
-                var deletedCount = await _cleanupRepository.DeleteMarkedKeysAsync();
+                var deletedCount = await _cleanupRepository.DeleteMarkedKeysAsync(cancellationToken);
 
                 stopwatch.Stop();
 

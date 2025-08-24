@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Options;
 using RevloDB.Configuration;
-using RevloDB.Services;
+using RevloDB.Services.Interfaces;
 
 namespace RevloDB.Jobs
 {
@@ -36,7 +36,7 @@ namespace RevloDB.Jobs
 
             if (!stoppingToken.IsCancellationRequested)
             {
-                await ExecuteCleanupTask();
+                await ExecuteCleanupTask(stoppingToken);
             }
 
             using var timer = new PeriodicTimer(TimeSpan.FromHours(_options.IntervalHours));
@@ -44,11 +44,11 @@ namespace RevloDB.Jobs
             while (!stoppingToken.IsCancellationRequested &&
                    await timer.WaitForNextTickAsync(stoppingToken))
             {
-                await ExecuteCleanupTask();
+                await ExecuteCleanupTask(stoppingToken);
             }
         }
 
-        private async Task ExecuteCleanupTask()
+        private async Task ExecuteCleanupTask(CancellationToken cancellationToken)
         {
             try
             {
@@ -57,7 +57,7 @@ namespace RevloDB.Jobs
                 using var scope = _serviceProvider.CreateScope();
                 var cleanupService = scope.ServiceProvider.GetRequiredService<ICleanupService>();
 
-                var result = await cleanupService.ExecuteCleanupAsync();
+                var result = await cleanupService.ExecuteCleanupAsync(cancellationToken);
 
                 if (result.Success)
                 {

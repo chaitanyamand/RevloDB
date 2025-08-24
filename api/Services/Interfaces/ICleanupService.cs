@@ -1,8 +1,8 @@
-namespace RevloDB.Services
+namespace RevloDB.Services.Interfaces
 {
     public interface ICleanupService
     {
-        Task<CleanupResult> ExecuteCleanupAsync();
+        Task<CleanupResult> ExecuteCleanupAsync(CancellationToken cancellationToken = default);
     }
 
     public class CleanupResult

@@ -39,6 +39,6 @@ namespace RevloDB.DTOs
 
         [Required(ErrorMessage = "Version number is required")]
         [Range(1, int.MaxValue, ErrorMessage = "Version number must be a positive integer")]
-        public int VersionNumber { get; set; } = 0;
+        public int? VersionNumber { get; set; }
     }
 }
