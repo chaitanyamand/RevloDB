@@ -28,10 +28,15 @@ namespace RevloDB.Data
                       .IsUnique()
                       .HasDatabaseName("ix_keys_key_name");
 
+                entity.HasIndex(k => k.IsDeleted)
+                      .HasFilter("is_deleted = TRUE")
+                      .HasDatabaseName("ix_keys_is_deleted_true");
+
                 entity.Property(k => k.Id).HasColumnName("id");
                 entity.Property(k => k.KeyName).HasColumnName("key_name");
                 entity.Property(k => k.CurrentVersionId).HasColumnName("current_version_id");
                 entity.Property(k => k.CreatedAt).HasColumnName("created_at");
+                entity.Property(k => k.IsDeleted).HasColumnName("is_deleted");
 
                 entity.Property(k => k.CreatedAt)
                       .HasDefaultValueSql("NOW()");

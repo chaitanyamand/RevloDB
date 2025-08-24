@@ -19,6 +19,12 @@ namespace RevloDB.Extensions
                 .ValidateDataAnnotations()
                 .ValidateOnStart();
 
+            services
+                .AddOptions<CleanupJobOptions>()
+                .Bind(configuration.GetSection(CleanupJobOptions.SectionName))
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
+
             services.AddDbContext<RevloDbContext>((serviceProvider, options) =>
             {
                 var connectionString = configuration.GetConnectionString("DefaultConnection")
@@ -44,6 +50,8 @@ namespace RevloDB.Extensions
             services.AddScoped<IKeyValueService, KeyValueService>();
 
             services.AddScoped<IDatabaseInitializerService, DatabaseInitializerService>();
+            services.AddScoped<ICleanupRepository, CleanupRepository>();
+            services.AddScoped<ICleanupService, CleanupService>();
 
             return services;
         }

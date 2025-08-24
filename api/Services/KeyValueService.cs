@@ -1,5 +1,4 @@
 using RevloDB.DTOs;
-using RevloDB.Entities;
 using RevloDB.Repositories.Interfaces;
 using RevloDB.Services.Interfaces;
 
@@ -90,6 +89,15 @@ namespace RevloDB.Services
             }
         }
 
+        public async Task RestoreKeyAsync(string keyName)
+        {
+            var restored = await _keyRepository.RestoreByNameAsync(keyName);
+            if (!restored)
+            {
+                throw new KeyNotFoundException($"Key '{keyName}' not found or is not deleted");
+            }
+        }
+
         public async Task<IEnumerable<VersionDto>> GetKeyHistoryAsync(string keyName)
         {
             var key = await _keyRepository.GetByNameAsync(keyName);
@@ -118,6 +126,20 @@ namespace RevloDB.Services
             var version = versions.FirstOrDefault(v => v.VersionNumber == versionNumber);
 
             return version?.Value;
+        }
+
+        public async Task<KeyDto> RevertKeyAsync(RevertKeyDto revertKeyDto)
+        {
+            var revertedKey = await _keyRepository.RevertToVersionAsync(revertKeyDto.KeyName, revertKeyDto.VersionNumber!.Value);
+
+            return new KeyDto
+            {
+                Id = revertedKey.Id,
+                KeyName = revertedKey.KeyName,
+                CurrentValue = revertedKey.CurrentVersion?.Value,
+                CurrentVersionNumber = revertedKey.CurrentVersion?.VersionNumber,
+                CreatedAt = revertedKey.CreatedAt
+            };
         }
     }
 }

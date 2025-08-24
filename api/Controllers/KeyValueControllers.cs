@@ -97,6 +97,18 @@ namespace RevloDB.Controllers
             return NoContent();
         }
 
+        [HttpPost("{keyName}/restore")]
+        public async Task<IActionResult> RestoreKey(string keyName)
+        {
+            if (string.IsNullOrWhiteSpace(keyName))
+            {
+                return this.BadRequestProblem("Key name cannot be empty");
+            }
+
+            await _keyValueService.RestoreKeyAsync(keyName);
+            return NoContent();
+        }
+
         [HttpGet("{keyName}/history")]
         public async Task<ActionResult<IEnumerable<VersionDto>>> GetKeyHistory(string keyName)
         {
@@ -107,6 +119,18 @@ namespace RevloDB.Controllers
 
             var versions = await _keyValueService.GetKeyHistoryAsync(keyName);
             return Ok(versions);
+        }
+
+        [HttpPost("revert")]
+        public async Task<ActionResult<KeyDto>> RevertToVersion([FromBody] RevertKeyDto revertKeyDto)
+        {
+            if (!ModelState.IsValid)
+            {
+                return this.ModelValidationProblem(ModelState);
+            }
+
+            var key = await _keyValueService.RevertKeyAsync(revertKeyDto);
+            return Ok(key);
         }
 
         [HttpGet("{keyName}/version/{versionNumber}")]

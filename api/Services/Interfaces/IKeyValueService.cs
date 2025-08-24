@@ -10,7 +10,10 @@ namespace RevloDB.Services.Interfaces
         Task<KeyDto> CreateKeyAsync(CreateKeyDto createKeyDto);
         Task<KeyDto> UpdateKeyAsync(string keyName, UpdateKeyDto updateKeyDto);
         Task DeleteKeyAsync(string keyName);
+
+        Task RestoreKeyAsync(string keyName);
         Task<IEnumerable<VersionDto>> GetKeyHistoryAsync(string keyName);
         Task<string?> GetValueAtVersionAsync(string keyName, int versionNumber);
+        Task<KeyDto> RevertKeyAsync(RevertKeyDto revertKeyDto);
     }
 }

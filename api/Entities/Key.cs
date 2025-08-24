@@ -16,5 +16,6 @@ namespace RevloDB.Entities
         [ForeignKey("CurrentVersionId")]
         public Version? CurrentVersion { get; set; }
         public ICollection<Version> Versions { get; set; } = new List<Version>();
+        public bool IsDeleted { get; set; } = false;
     }
 }
