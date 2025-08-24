@@ -24,7 +24,8 @@ namespace RevloDB.Repositories
                 var key = new Key
                 {
                     KeyName = keyName,
-                    CreatedAt = now
+                    CreatedAt = now,
+                    IsDeleted = false
                 };
 
                 _context.Keys.Add(key);
@@ -66,6 +67,7 @@ namespace RevloDB.Repositories
             return await _context.Keys
                 .AsNoTracking()
                 .Include(k => k.CurrentVersion)
+                .Where(k => !k.IsDeleted)
                 .FirstOrDefaultAsync(k => k.Id == id);
         }
 
@@ -74,17 +76,35 @@ namespace RevloDB.Repositories
             return await _context.Keys
                 .AsNoTracking()
                 .Include(k => k.CurrentVersion)
+                .Where(k => !k.IsDeleted)
                 .FirstOrDefaultAsync(k => k.KeyName == keyName);
         }
 
         public async Task<bool> DeleteByNameAsync(string keyName)
         {
             var key = await _context.Keys
+                .Where(k => !k.IsDeleted)
                 .FirstOrDefaultAsync(k => k.KeyName == keyName);
 
             if (key == null) return false;
 
-            _context.Keys.Remove(key);
+            key.IsDeleted = true;
+
+            await _context.SaveChangesAsync();
+
+            return true;
+        }
+
+        public async Task<bool> RestoreByNameAsync(string keyName)
+        {
+            var key = await _context.Keys
+                .Where(k => k.IsDeleted)
+                .FirstOrDefaultAsync(k => k.KeyName == keyName);
+
+            if (key == null) return false;
+
+            key.IsDeleted = false;
+
             await _context.SaveChangesAsync();
 
             return true;
@@ -95,6 +115,7 @@ namespace RevloDB.Repositories
             return await _context.Keys
                 .AsNoTracking()
                 .Include(k => k.CurrentVersion)
+                .Where(k => !k.IsDeleted)
                 .ToListAsync();
         }
 
@@ -105,7 +126,7 @@ namespace RevloDB.Repositories
             try
             {
                 var key = await _context.Keys
-                    .Include(k => k.CurrentVersion)
+                    .Where(k => !k.IsDeleted)
                     .FirstOrDefaultAsync(k => k.KeyName == keyName);
 
                 if (key == null)
@@ -113,7 +134,13 @@ namespace RevloDB.Repositories
                     throw new KeyNotFoundException($"Key '{keyName}' not found");
                 }
 
-                var nextVersionNumber = (key.CurrentVersion?.VersionNumber ?? 0) + 1;
+                var maxVersionNumber = await _context.Versions
+                    .Where(v => v.KeyId == key.Id)
+                    .Select(v => (int?)v.VersionNumber)
+                    .MaxAsync() ?? 0;
+
+                var nextVersionNumber = maxVersionNumber + 1;
+
                 var newVersion = new Entities.Version
                 {
                     KeyId = key.Id,
@@ -148,12 +175,70 @@ namespace RevloDB.Repositories
                 throw;
             }
         }
-
         public async Task<bool> ExistsAsync(string keyName)
         {
             return await _context.Keys
                 .AsNoTracking()
+                .Where(k => !k.IsDeleted)
                 .AnyAsync(k => k.KeyName == keyName);
+        }
+
+        public async Task<Key> RevertToVersionAsync(string keyName, int targetVersionNumber)
+        {
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+
+            try
+            {
+                var key = await _context.Keys
+                    .Include(k => k.CurrentVersion)
+                    .Where(k => !k.IsDeleted)
+                    .FirstOrDefaultAsync(k => k.KeyName == keyName);
+
+                if (key == null)
+                {
+                    throw new KeyNotFoundException($"Key '{keyName}' not found");
+                }
+
+                var targetVersion = await _context.Versions
+                    .FirstOrDefaultAsync(v => v.KeyId == key.Id && v.VersionNumber == targetVersionNumber);
+
+                if (targetVersion == null)
+                {
+                    throw new InvalidOperationException($"Version {targetVersionNumber} not found for key '{keyName}'");
+                }
+
+                if (key.CurrentVersion?.VersionNumber == targetVersionNumber)
+                {
+                    return key;
+                }
+
+                key.CurrentVersion = targetVersion;
+                await _context.SaveChangesAsync();
+
+                await transaction.CommitAsync();
+                return key;
+            }
+            catch (KeyNotFoundException)
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+            catch (InvalidOperationException)
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+            catch (DbUpdateException ex)
+                when (ex.InnerException is PostgresException postgresEx && postgresEx.SqlState == "23505")
+            {
+                await transaction.RollbackAsync();
+                throw new InvalidOperationException("Concurrency conflict: The key was updated by another operation. Please try again.");
+            }
+            catch (Exception)
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
         }
     }
 }
