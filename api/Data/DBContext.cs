@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using RevloDB.Data.Configurations;
+using RevloDB.Entities;
 using Version = RevloDB.Entities.Version;
 using Key = RevloDB.Entities.Key;
 
@@ -13,65 +15,19 @@ namespace RevloDB.Data
         public DbSet<Key> Keys { get; set; }
         public DbSet<Version> Versions { get; set; }
 
+        public DbSet<User> Users { get; set; }
+        public DbSet<Namespace> Namespaces { get; set; }
+        public DbSet<UserNamespace> UserNamespaces { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
-            modelBuilder.Entity<Key>(entity =>
-            {
-                entity.ToTable("keys");
-
-                entity.HasIndex(k => k.CurrentVersionId)
-                      .HasDatabaseName("ix_keys_current_version_id");
-
-                entity.HasIndex(k => k.KeyName)
-                      .IsUnique()
-                      .HasDatabaseName("ix_keys_key_name");
-
-                entity.HasIndex(k => k.IsDeleted)
-                      .HasFilter("is_deleted = TRUE")
-                      .HasDatabaseName("ix_keys_is_deleted_true");
-
-                entity.Property(k => k.Id).HasColumnName("id");
-                entity.Property(k => k.KeyName).HasColumnName("key_name");
-                entity.Property(k => k.CurrentVersionId).HasColumnName("current_version_id");
-                entity.Property(k => k.CreatedAt).HasColumnName("created_at");
-                entity.Property(k => k.IsDeleted).HasColumnName("is_deleted");
-
-                entity.Property(k => k.CreatedAt)
-                      .HasDefaultValueSql("NOW()");
-            });
-
-            modelBuilder.Entity<Version>(entity =>
-            {
-                entity.ToTable("versions");
-
-                entity.HasIndex(v => new { v.KeyId, v.VersionNumber })
-                      .IsUnique()
-                      .HasDatabaseName("ix_versions_key_id_version_number");
-
-                entity.Property(v => v.Id).HasColumnName("id");
-                entity.Property(v => v.Value).HasColumnName("value");
-                entity.Property(v => v.Timestamp).HasColumnName("timestamp");
-                entity.Property(v => v.VersionNumber).HasColumnName("version_number");
-                entity.Property(v => v.KeyId).HasColumnName("key_id");
-
-                entity.Property(v => v.Timestamp)
-                      .HasDefaultValueSql("NOW()");
-
-                entity.HasOne(v => v.Key)
-                      .WithMany(k => k.Versions)
-                      .HasForeignKey(v => v.KeyId)
-                      .OnDelete(DeleteBehavior.Cascade)
-                      .HasConstraintName("fk_versions_keys_key_id");
-            });
-
-            modelBuilder.Entity<Key>()
-                .HasOne(k => k.CurrentVersion)
-                .WithMany()
-                .HasForeignKey(k => k.CurrentVersionId)
-                .OnDelete(DeleteBehavior.SetNull)
-                .HasConstraintName("fk_keys_versions_current_version_id");
+            modelBuilder.ApplyConfiguration(new UserConfiguration());
+            modelBuilder.ApplyConfiguration(new NamespaceConfiguration());
+            modelBuilder.ApplyConfiguration(new UserNamespaceConfiguration());
+            modelBuilder.ApplyConfiguration(new KeyConfiguration());
+            modelBuilder.ApplyConfiguration(new VersionConfiguration());
         }
     }
 }

@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Mvc;
 using RevloDB.DTOs;
 using RevloDB.Services.Interfaces;
 using RevloDB.Extensions;
+using RevloDB.Filters;
+using RevloDB.Utils;
 
 namespace RevloDB.Controllers
 {
@@ -16,21 +18,25 @@ namespace RevloDB.Controllers
         }
 
         [HttpGet]
+        [AuthRequired]
+        [Read]
         public async Task<ActionResult<IEnumerable<KeyDto>>> GetAllKeys()
         {
-            var keys = await _keyValueService.GetAllKeysAsync();
+            var namespaceId = ControllerUtil.GetNameSpaceIdFromHTTPContext(HttpContext);
+            var keys = await _keyValueService.GetAllKeysAsync(namespaceId);
             return Ok(keys);
         }
 
         [HttpGet("{keyName}")]
         public async Task<ActionResult<KeyDto>> GetKey(string keyName)
         {
+            var namespaceId = ControllerUtil.GetNameSpaceIdFromHTTPContext(HttpContext);
             if (string.IsNullOrWhiteSpace(keyName))
             {
                 return this.BadRequestProblem("Key name cannot be empty");
             }
 
-            var key = await _keyValueService.GetKeyAsync(keyName);
+            var key = await _keyValueService.GetKeyAsync(keyName, namespaceId!);
             if (key == null)
             {
                 return this.NotFoundProblem($"Key '{keyName}' not found");
@@ -46,8 +52,8 @@ namespace RevloDB.Controllers
             {
                 return this.BadRequestProblem("Key name cannot be empty");
             }
-
-            var value = await _keyValueService.GetValueAsync(keyName);
+            var namespaceId = ControllerUtil.GetNameSpaceIdFromHTTPContext(HttpContext);
+            var value = await _keyValueService.GetValueAsync(keyName, namespaceId);
             if (value == null)
             {
                 return this.NotFoundProblem($"Key '{keyName}' not found");
@@ -63,8 +69,8 @@ namespace RevloDB.Controllers
             {
                 return this.ModelValidationProblem(ModelState);
             }
-
-            var key = await _keyValueService.CreateKeyAsync(createKeyDto);
+            var namespaceId = ControllerUtil.GetNameSpaceIdFromHTTPContext(HttpContext);
+            var key = await _keyValueService.CreateKeyAsync(createKeyDto, namespaceId);
             return CreatedAtAction(nameof(GetKey), new { keyName = key.KeyName }, key);
         }
 
@@ -80,8 +86,8 @@ namespace RevloDB.Controllers
             {
                 return this.ModelValidationProblem(ModelState);
             }
-
-            var key = await _keyValueService.UpdateKeyAsync(keyName, updateKeyDto);
+            var namespaceId = ControllerUtil.GetNameSpaceIdFromHTTPContext(HttpContext);
+            var key = await _keyValueService.UpdateKeyAsync(keyName, updateKeyDto, namespaceId);
             return Ok(key);
         }
 
@@ -92,8 +98,8 @@ namespace RevloDB.Controllers
             {
                 return this.BadRequestProblem("Key name cannot be empty");
             }
-
-            await _keyValueService.DeleteKeyAsync(keyName);
+            var namespaceId = ControllerUtil.GetNameSpaceIdFromHTTPContext(HttpContext);
+            await _keyValueService.DeleteKeyAsync(keyName, namespaceId);
             return NoContent();
         }
 
@@ -104,8 +110,8 @@ namespace RevloDB.Controllers
             {
                 return this.BadRequestProblem("Key name cannot be empty");
             }
-
-            await _keyValueService.RestoreKeyAsync(keyName);
+            var namespaceId = ControllerUtil.GetNameSpaceIdFromHTTPContext(HttpContext);
+            await _keyValueService.RestoreKeyAsync(keyName, namespaceId);
             return NoContent();
         }
 
@@ -116,8 +122,8 @@ namespace RevloDB.Controllers
             {
                 return this.BadRequestProblem("Key name cannot be empty");
             }
-
-            var versions = await _keyValueService.GetKeyHistoryAsync(keyName);
+            var namespaceId = ControllerUtil.GetNameSpaceIdFromHTTPContext(HttpContext);
+            var versions = await _keyValueService.GetKeyHistoryAsync(keyName, namespaceId);
             return Ok(versions);
         }
 
@@ -128,8 +134,8 @@ namespace RevloDB.Controllers
             {
                 return this.ModelValidationProblem(ModelState);
             }
-
-            var key = await _keyValueService.RevertKeyAsync(revertKeyDto);
+            var namespaceId = ControllerUtil.GetNameSpaceIdFromHTTPContext(HttpContext);
+            var key = await _keyValueService.RevertKeyAsync(revertKeyDto, namespaceId);
             return Ok(key);
         }
 
@@ -146,7 +152,8 @@ namespace RevloDB.Controllers
                 return this.BadRequestProblem("Version number must be a positive integer");
             }
 
-            var value = await _keyValueService.GetValueAtVersionAsync(keyName, versionNumber);
+            var namespaceId = ControllerUtil.GetNameSpaceIdFromHTTPContext(HttpContext);
+            var value = await _keyValueService.GetValueAtVersionAsync(keyName, versionNumber, namespaceId);
             if (value == null)
             {
                 return this.NotFoundProblem($"Key '{keyName}' or version {versionNumber} not found");

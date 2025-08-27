@@ -6,6 +6,8 @@ using RevloDB.Repositories;
 using RevloDB.Repositories.Interfaces;
 using RevloDB.Services;
 using RevloDB.Services.Interfaces;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 namespace RevloDB.Extensions
 {
@@ -52,6 +54,23 @@ namespace RevloDB.Extensions
             services.AddScoped<IDatabaseInitializerService, DatabaseInitializerService>();
             services.AddScoped<ICleanupRepository, CleanupRepository>();
             services.AddScoped<ICleanupService, CleanupService>();
+
+            return services;
+        }
+
+        public static IServiceCollection AddJwtAuth(this IServiceCollection services)
+        {
+            var secretKey = services.BuildServiceProvider().GetRequiredService<IConfiguration>()["Jwt:Key"] ?? throw new InvalidOperationException("JWT secret key not configured.");
+            var key = Encoding.UTF8.GetBytes(secretKey);
+
+            var tokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(key),
+                ClockSkew = TimeSpan.Zero
+            };
+
+            services.AddSingleton(tokenValidationParameters);
 
             return services;
         }

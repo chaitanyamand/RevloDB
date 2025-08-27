@@ -1,3 +1,5 @@
+using Microsoft.IdentityModel.Tokens;
+using RevloDB.Middleware;
 using RevloDB.Services;
 
 namespace RevloDB.Extensions
@@ -14,6 +16,13 @@ namespace RevloDB.Extensions
 
         public static WebApplication ConfigureRevloDbPipeline(this WebApplication app)
         {
+
+            var tokenValidationParams = app.Services.GetRequiredService<TokenValidationParameters>();
+
+            app.UseMiddleware<GlobalExceptionMiddleware>();
+            app.UseMiddleware<JwtAuthMiddleware>(tokenValidationParams);
+            app.UseMiddleware<RoleAuthMiddleware>();
+
             if (app.Environment.IsDevelopment())
             {
                 app.UseSwagger();

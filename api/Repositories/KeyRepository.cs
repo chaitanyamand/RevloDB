@@ -15,7 +15,7 @@ namespace RevloDB.Repositories
             _context = context;
         }
 
-        public async Task<Key> CreateKeyWithVersionAsync(string keyName, string value)
+        public async Task<Key> CreateKeyWithVersionAsync(string keyName, string value, int namespaceId)
         {
             await using var transaction = await _context.Database.BeginTransactionAsync();
             try
@@ -25,7 +25,9 @@ namespace RevloDB.Repositories
                 {
                     KeyName = keyName,
                     CreatedAt = now,
-                    IsDeleted = false
+                    IsDeleted = false,
+                    NamespaceId = namespaceId,
+
                 };
 
                 _context.Keys.Add(key);
@@ -62,28 +64,28 @@ namespace RevloDB.Repositories
             }
         }
 
-        public async Task<Key?> GetByIdAsync(int id)
+        public async Task<Key?> GetByIdAsync(int id, int namespaceId)
         {
             return await _context.Keys
                 .AsNoTracking()
                 .Include(k => k.CurrentVersion)
-                .Where(k => !k.IsDeleted)
+                .Where(k => !k.IsDeleted && k.NamespaceId == namespaceId)
                 .FirstOrDefaultAsync(k => k.Id == id);
         }
 
-        public async Task<Key?> GetByNameAsync(string keyName)
+        public async Task<Key?> GetByNameAsync(string keyName, int namespaceId)
         {
             return await _context.Keys
                 .AsNoTracking()
                 .Include(k => k.CurrentVersion)
-                .Where(k => !k.IsDeleted)
+                .Where(k => !k.IsDeleted && namespaceId == k.NamespaceId)
                 .FirstOrDefaultAsync(k => k.KeyName == keyName);
         }
 
-        public async Task<bool> DeleteByNameAsync(string keyName)
+        public async Task<bool> DeleteByNameAsync(string keyName, int namespaceId)
         {
             var key = await _context.Keys
-                .Where(k => !k.IsDeleted)
+                .Where(k => !k.IsDeleted && k.NamespaceId == namespaceId)
                 .FirstOrDefaultAsync(k => k.KeyName == keyName);
 
             if (key == null) return false;
@@ -95,10 +97,10 @@ namespace RevloDB.Repositories
             return true;
         }
 
-        public async Task<bool> RestoreByNameAsync(string keyName)
+        public async Task<bool> RestoreByNameAsync(string keyName, int namespaceId)
         {
             var key = await _context.Keys
-                .Where(k => k.IsDeleted)
+                .Where(k => k.IsDeleted && k.NamespaceId == namespaceId)
                 .FirstOrDefaultAsync(k => k.KeyName == keyName);
 
             if (key == null) return false;
@@ -110,23 +112,23 @@ namespace RevloDB.Repositories
             return true;
         }
 
-        public async Task<IEnumerable<Key>> GetAllAsync()
+        public async Task<IEnumerable<Key>> GetAllAsync(int namespaceId)
         {
             return await _context.Keys
                 .AsNoTracking()
                 .Include(k => k.CurrentVersion)
-                .Where(k => !k.IsDeleted)
+                .Where(k => !k.IsDeleted && k.NamespaceId == namespaceId)
                 .ToListAsync();
         }
 
-        public async Task<Key> AddNewVersionAsync(string keyName, string value)
+        public async Task<Key> AddNewVersionAsync(string keyName, string value, int namespaceId)
         {
             await using var transaction = await _context.Database.BeginTransactionAsync();
 
             try
             {
                 var key = await _context.Keys
-                    .Where(k => !k.IsDeleted)
+                    .Where(k => !k.IsDeleted && k.NamespaceId == namespaceId)
                     .FirstOrDefaultAsync(k => k.KeyName == keyName);
 
                 if (key == null)
@@ -175,15 +177,15 @@ namespace RevloDB.Repositories
                 throw;
             }
         }
-        public async Task<bool> ExistsAsync(string keyName)
+        public async Task<bool> ExistsAsync(string keyName, int namespaceId)
         {
             return await _context.Keys
                 .AsNoTracking()
-                .Where(k => !k.IsDeleted)
+                .Where(k => !k.IsDeleted && k.NamespaceId == namespaceId)
                 .AnyAsync(k => k.KeyName == keyName);
         }
 
-        public async Task<Key> RevertToVersionAsync(string keyName, int targetVersionNumber)
+        public async Task<Key> RevertToVersionAsync(string keyName, int targetVersionNumber, int namespaceId)
         {
             await using var transaction = await _context.Database.BeginTransactionAsync();
 
@@ -191,7 +193,7 @@ namespace RevloDB.Repositories
             {
                 var key = await _context.Keys
                     .Include(k => k.CurrentVersion)
-                    .Where(k => !k.IsDeleted)
+                    .Where(k => !k.IsDeleted && k.NamespaceId == namespaceId)
                     .FirstOrDefaultAsync(k => k.KeyName == keyName);
 
                 if (key == null)

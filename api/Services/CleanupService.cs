@@ -15,36 +15,23 @@ namespace RevloDB.Services
             _logger = logger;
         }
 
-        public async Task<CleanupResult> ExecuteCleanupAsync(CancellationToken cancellationToken = default)
+        public async Task<CleanupServiceResult> ExecuteCleanupAsync(CancellationToken cancellationToken = default)
         {
             var stopwatch = Stopwatch.StartNew();
 
             try
             {
-                var initialCount = await _cleanupRepository.GetMarkedKeysCountAsync(cancellationToken);
-                _logger.LogInformation("Starting cleanup. Found {Count} keys marked for deletion", initialCount);
+                var summary = await _cleanupRepository.GetCleanupSummaryAsync();
+                _logger.LogInformation("Found {Total} entities marked for deletion", summary.TotalMarkedForDeletion);
 
-                if (initialCount == 0)
-                {
-                    return new CleanupResult
-                    {
-                        Success = true,
-                        DeletedKeysCount = 0,
-                        Duration = stopwatch.Elapsed
-                    };
-                }
-
-                var deletedCount = await _cleanupRepository.DeleteMarkedKeysAsync(cancellationToken);
-
+                var result = await _cleanupRepository.PerformFullCleanupAsync();
+                _logger.LogInformation("Cleanup completed. Total deleted: {Total}", result.TotalDeleted);
                 stopwatch.Stop();
 
-                _logger.LogInformation("Cleanup completed successfully. Deleted {Count} keys in {Duration}ms",
-                    deletedCount, stopwatch.ElapsedMilliseconds);
-
-                return new CleanupResult
+                return new CleanupServiceResult
                 {
                     Success = true,
-                    DeletedKeysCount = deletedCount,
+                    DeletedCount = result.TotalDeleted,
                     Duration = stopwatch.Elapsed
                 };
             }
@@ -53,10 +40,10 @@ namespace RevloDB.Services
                 stopwatch.Stop();
                 _logger.LogError(ex, "Error occurred during cleanup execution");
 
-                return new CleanupResult
+                return new CleanupServiceResult
                 {
                     Success = false,
-                    DeletedKeysCount = 0,
+                    DeletedCount = 0,
                     Duration = stopwatch.Elapsed,
                     ErrorMessage = ex.Message
                 };
