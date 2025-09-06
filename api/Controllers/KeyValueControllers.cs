@@ -46,6 +46,8 @@ namespace RevloDB.Controllers
         }
 
         [HttpGet("{keyName}/value")]
+        [AuthRequired]
+        [Read]
         public async Task<ActionResult<KeyValueDto>> GetValue(string keyName)
         {
             if (string.IsNullOrWhiteSpace(keyName))
@@ -63,6 +65,8 @@ namespace RevloDB.Controllers
         }
 
         [HttpPost]
+        [AuthRequired]
+        [Write]
         public async Task<ActionResult<KeyDto>> CreateKey([FromBody] CreateKeyDto createKeyDto)
         {
             if (!ModelState.IsValid)
@@ -75,6 +79,8 @@ namespace RevloDB.Controllers
         }
 
         [HttpPut("{keyName}")]
+        [AuthRequired]
+        [Write]
         public async Task<ActionResult<KeyDto>> UpdateKey(string keyName, [FromBody] UpdateKeyDto updateKeyDto)
         {
             if (string.IsNullOrWhiteSpace(keyName))
@@ -92,6 +98,8 @@ namespace RevloDB.Controllers
         }
 
         [HttpDelete("{keyName}")]
+        [AuthRequired]
+        [Write]
         public async Task<IActionResult> DeleteKey(string keyName)
         {
             if (string.IsNullOrWhiteSpace(keyName))
@@ -104,6 +112,8 @@ namespace RevloDB.Controllers
         }
 
         [HttpPost("{keyName}/restore")]
+        [AuthRequired]
+        [Write]
         public async Task<IActionResult> RestoreKey(string keyName)
         {
             if (string.IsNullOrWhiteSpace(keyName))
@@ -116,6 +126,8 @@ namespace RevloDB.Controllers
         }
 
         [HttpGet("{keyName}/history")]
+        [AuthRequired]
+        [Read]
         public async Task<ActionResult<IEnumerable<VersionDto>>> GetKeyHistory(string keyName)
         {
             if (string.IsNullOrWhiteSpace(keyName))
@@ -128,6 +140,8 @@ namespace RevloDB.Controllers
         }
 
         [HttpPost("revert")]
+        [AuthRequired]
+        [Write]
         public async Task<ActionResult<KeyDto>> RevertToVersion([FromBody] RevertKeyDto revertKeyDto)
         {
             if (!ModelState.IsValid)
@@ -140,6 +154,8 @@ namespace RevloDB.Controllers
         }
 
         [HttpGet("{keyName}/version/{versionNumber}")]
+        [AuthRequired]
+        [Read]
         public async Task<ActionResult<KeyVersionValueDto>> GetValueAtVersion(string keyName, int versionNumber)
         {
             if (string.IsNullOrWhiteSpace(keyName))

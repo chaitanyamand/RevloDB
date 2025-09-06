@@ -18,6 +18,9 @@ builder.Services.AddHostedService<CleanupBackgroundJob>();
 // Register JWT authentication config
 builder.Services.AddJwtAuth();
 
+// Register AutoMapper profiles
+builder.Services.AddMappers();
+
 var app = builder.Build();
 
 // Initialize database

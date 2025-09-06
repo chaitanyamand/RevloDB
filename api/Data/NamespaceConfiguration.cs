@@ -38,6 +38,10 @@ namespace RevloDB.Data.Configurations
                 .IsUnique()
                 .HasDatabaseName("ix_namespaces_name_created_by_user_id");
 
+            builder.HasIndex(n => n.IsDeleted)
+                .HasFilter("is_deleted = TRUE")
+                .HasDatabaseName("ix_namespace_is_deleted_true");
+
             builder.HasIndex(n => n.CreatedByUserId)
                 .HasDatabaseName("ix_namespaces_created_by_user_id");
         }

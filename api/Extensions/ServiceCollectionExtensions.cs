@@ -89,5 +89,11 @@ namespace RevloDB.Extensions
 
             return services;
         }
+
+        public static IServiceCollection AddMappers(this IServiceCollection services)
+        {
+            services.AddAutoMapper(typeof(UserMappingProfile).Assembly);
+            return services;
+        }
     }
 }

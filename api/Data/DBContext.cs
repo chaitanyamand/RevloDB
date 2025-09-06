@@ -18,6 +18,7 @@ namespace RevloDB.Data
         public DbSet<User> Users { get; set; }
         public DbSet<Namespace> Namespaces { get; set; }
         public DbSet<UserNamespace> UserNamespaces { get; set; }
+        public DbSet<ApiKey> ApiKeys { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -28,6 +29,7 @@ namespace RevloDB.Data
             modelBuilder.ApplyConfiguration(new UserNamespaceConfiguration());
             modelBuilder.ApplyConfiguration(new KeyConfiguration());
             modelBuilder.ApplyConfiguration(new VersionConfiguration());
+            modelBuilder.ApplyConfiguration(new ApiKeyConfiguration());
         }
     }
 }

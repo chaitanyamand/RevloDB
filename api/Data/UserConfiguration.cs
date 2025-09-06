@@ -44,6 +44,10 @@ namespace RevloDB.Data.Configurations
                 .IsUnique()
                 .HasDatabaseName("ix_users_username");
 
+            builder.HasIndex(u => u.IsDeleted)
+                .HasFilter("is_deleted = TRUE")
+                .HasDatabaseName("ix_users_is_deleted_true");
+
             builder.HasIndex(u => u.Email)
                 .IsUnique()
                 .HasDatabaseName("ix_users_email");

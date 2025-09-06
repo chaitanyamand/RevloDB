@@ -8,5 +8,10 @@ namespace RevloDB.Utils
         {
             return int.Parse(httpContext.GetItem<string>(APIConstants.NAMESPACE_ID)!);
         }
+
+        public static int GetUserIdFromHTTPContext(HttpContext httpContext)
+        {
+            return int.Parse(httpContext.GetItem<string>(APIConstants.USER_ID)!);
+        }
     }
 }
