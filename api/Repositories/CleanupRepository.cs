@@ -57,7 +57,7 @@ namespace RevloDB.Repositories
 
             var userIds = usersToDelete.Select(u => u.Id).ToList();
             var usersWithActiveNamespaces = await _context.Namespaces
-                .Where(n => userIds.Contains(n.CreatedByUserId) && !n.IsDeleted)
+                .Where(n => n.CreatedByUserId.HasValue && userIds.Contains(n.CreatedByUserId.Value) && !n.IsDeleted)
                 .Select(n => n.CreatedByUserId)
                 .Distinct()
                 .ToListAsync(cancellationToken);

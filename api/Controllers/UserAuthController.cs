@@ -3,7 +3,7 @@ using RevloDB.DTOs;
 using RevloDB.Services.Interfaces;
 using RevloDB.Extensions;
 using RevloDB.Filters;
-using RevloDB.Utils;
+using RevloDB.Utility;
 
 namespace RevloDB.Controllers
 {
@@ -36,13 +36,7 @@ namespace RevloDB.Controllers
             {
                 return this.ModelValidationProblem(ModelState);
             }
-
             var loginResponse = await _userAuthService.LoginAsync(loginDto);
-            if (loginResponse == null)
-            {
-                return this.UnauthorizedProblem("Invalid username or password");
-            }
-
             return Ok(loginResponse);
         }
 
@@ -54,9 +48,7 @@ namespace RevloDB.Controllers
             {
                 return this.ModelValidationProblem(ModelState);
             }
-
             var currentUserId = ControllerUtil.GetUserIdFromHTTPContext(HttpContext);
-
             await _userAuthService.ChangePasswordAsync(currentUserId, changePasswordDto);
             return NoContent();
         }

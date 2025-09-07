@@ -5,7 +5,7 @@ namespace RevloDB.DTOs
     public class SignUpDto
     {
         [Required(ErrorMessage = "Username is required")]
-        [StringLength(255, ErrorMessage = "Username cannot exceed 255 characters")]
+        [StringLength(25, ErrorMessage = "Username cannot exceed 25 characters")]
         public string Username { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Password is required")]

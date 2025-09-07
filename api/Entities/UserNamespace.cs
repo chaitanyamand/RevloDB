@@ -1,5 +1,3 @@
-using System.ComponentModel.DataAnnotations;
-
 namespace RevloDB.Entities
 {
     public enum NamespaceRole

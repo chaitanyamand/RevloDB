@@ -4,9 +4,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using RevloDB.Constants;
 using RevloDB.Data;
-using RevloDB.Entities;
 using RevloDB.Filters;
-using RevloDB.Utils;
+using RevloDB.Utility;
 
 namespace RevloDB.Middleware
 {
@@ -62,12 +61,11 @@ namespace RevloDB.Middleware
                 var hasRole = await dbContext.UserNamespaces
                     .AnyAsync(un => un.UserId == parsedUserId &&
                                    un.NamespaceId == parsedNamespaceId &&
-                                   HasSufficientRole(un.Role, roleAttribute.RequiredRole));
+                                   RoleCheckUtil.HasSufficientRole(un.Role, roleAttribute.RequiredRole));
 
                 if (!hasRole)
                 {
-                    _logger.LogWarning("User {UserId} denied access to namespace {NamespaceId}. Required role: {RequiredRole}",
-                        userId, namespaceId, roleAttribute.RequiredRole);
+                    _logger.LogWarning($"User {userId} denied access to namespace {namespaceId}. Required role: {roleAttribute.RequiredRole}");
 
                     await WriteForbiddenAsync(context, $"Insufficient role. {roleAttribute.RequiredRole} access required.");
                     return;
@@ -79,8 +77,7 @@ namespace RevloDB.Middleware
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error during role verification for user {UserId} in namespace {NamespaceId}",
-                    userId, namespaceId);
+                _logger.LogError(ex, $"Error during role verification for user {userId} in namespace {namespaceId}");
                 await WriteForbiddenAsync(context, "Role verification error.");
             }
         }
@@ -90,17 +87,6 @@ namespace RevloDB.Middleware
             if (context.Request.Query.TryGetValue("namespaceId", out var queryNs))
                 return queryNs.ToString();
             return null;
-        }
-
-        private static bool HasSufficientRole(NamespaceRole NamespaceRole, NamespaceRole requiredRole)
-        {
-            return requiredRole switch
-            {
-                NamespaceRole.ReadOnly => NamespaceRole == NamespaceRole.ReadOnly || NamespaceRole == NamespaceRole.Editor || NamespaceRole == NamespaceRole.Admin,
-                NamespaceRole.Editor => NamespaceRole == NamespaceRole.Editor || NamespaceRole == NamespaceRole.Admin,
-                NamespaceRole.Admin => NamespaceRole == NamespaceRole.Admin,
-                _ => false
-            };
         }
 
         private static async Task WriteForbiddenAsync(HttpContext context, string detail)

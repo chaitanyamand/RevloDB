@@ -28,8 +28,7 @@ namespace RevloDB.Data.Configurations
 
             builder.Property(a => a.Role)
                 .HasColumnName("role")
-                .HasMaxLength(50)
-                .IsRequired();
+                .HasConversion<int>(); // Store enum as integer
 
             builder.Property(a => a.Description)
                 .HasColumnName("description")
@@ -44,7 +43,7 @@ namespace RevloDB.Data.Configurations
 
             builder.Property(a => a.IsDeleted)
                 .HasColumnName("is_deleted")
-                .HasDefaultValue(true);
+                .HasDefaultValue(false);
 
             // Indexes
             builder.HasIndex(a => a.KeyValue)
@@ -61,16 +60,17 @@ namespace RevloDB.Data.Configurations
                 .HasFilter("expires_at IS NOT NULL")
                 .HasDatabaseName("ix_api_keys_expires_at_is_deleted");
 
+            builder.HasIndex(a => a.IsDeleted)
+                .HasFilter("is_deleted = TRUE")
+                .HasDatabaseName("ix_api_keys_is_deleted_true");
+
             // Relationships
             builder.HasOne(a => a.User)
-                .WithMany()
+                .WithMany(u => u.ApiKeys)
                 .HasForeignKey(a => a.UserId)
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("fk_api_keys_users_user_id");
 
-            builder.HasIndex(a => a.IsDeleted)
-                .HasFilter("is_deleted = TRUE")
-                .HasDatabaseName("ix_api_keys_is_deleted_true");
 
             builder.HasOne(a => a.Namespace)
                 .WithMany(n => n.ApiKeys)

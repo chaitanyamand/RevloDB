@@ -6,8 +6,7 @@ using RevloDB.Repositories;
 using RevloDB.Repositories.Interfaces;
 using RevloDB.Services;
 using RevloDB.Services.Interfaces;
-using Microsoft.IdentityModel.Tokens;
-using System.Text;
+
 
 namespace RevloDB.Extensions
 {
@@ -24,6 +23,12 @@ namespace RevloDB.Extensions
             services
                 .AddOptions<CleanupJobOptions>()
                 .Bind(configuration.GetSection(CleanupJobOptions.SectionName))
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
+
+            services
+                .AddOptions<AuthOptions>()
+                .Bind(configuration.GetSection(AuthOptions.SectionName))
                 .ValidateDataAnnotations()
                 .ValidateOnStart();
 
@@ -46,31 +51,25 @@ namespace RevloDB.Extensions
                 }
             });
 
+            // Register repositories
             services.AddScoped<IKeyRepository, KeyRepository>();
             services.AddScoped<IVersionRepository, VersionRepository>();
+            services.AddScoped<IUserRepository, UserRepository>();
+            services.AddScoped<INamespaceRepository, NamespaceRepository>();
+            services.AddScoped<IAPIKeyRepository, APIKeyRepository>();
+            services.AddScoped<IUserNamespaceRepository, UserNamespaceRepository>();
+            services.AddScoped<ICleanupRepository, CleanupRepository>();
 
+            // Register services
+            services.AddScoped<ICleanupService, CleanupService>();
+            services.AddScoped<IUserService, UserService>();
+            services.AddScoped<IAPIKeyService, APIKeyService>();
+            services.AddScoped<INamespaceService, NamespaceService>();
+            services.AddScoped<IUserNamespaceService, UserNamespaceService>();
             services.AddScoped<IKeyValueService, KeyValueService>();
+            services.AddScoped<IUserAuthService, UserAuthService>();
 
             services.AddScoped<IDatabaseInitializerService, DatabaseInitializerService>();
-            services.AddScoped<ICleanupRepository, CleanupRepository>();
-            services.AddScoped<ICleanupService, CleanupService>();
-
-            return services;
-        }
-
-        public static IServiceCollection AddJwtAuth(this IServiceCollection services)
-        {
-            var secretKey = services.BuildServiceProvider().GetRequiredService<IConfiguration>()["Jwt:Key"] ?? throw new InvalidOperationException("JWT secret key not configured.");
-            var key = Encoding.UTF8.GetBytes(secretKey);
-
-            var tokenValidationParameters = new TokenValidationParameters
-            {
-                ValidateIssuerSigningKey = true,
-                IssuerSigningKey = new SymmetricSecurityKey(key),
-                ClockSkew = TimeSpan.Zero
-            };
-
-            services.AddSingleton(tokenValidationParameters);
 
             return services;
         }
@@ -92,7 +91,7 @@ namespace RevloDB.Extensions
 
         public static IServiceCollection AddMappers(this IServiceCollection services)
         {
-            services.AddAutoMapper(typeof(UserMappingProfile).Assembly);
+            services.AddAutoMapper(typeof(Program));
             return services;
         }
     }

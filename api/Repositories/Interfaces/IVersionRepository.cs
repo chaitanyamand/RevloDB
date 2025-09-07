@@ -1,5 +1,3 @@
-using RevloDB.Entities;
-
 namespace RevloDB.Repositories.Interfaces
 {
     public interface IVersionRepository

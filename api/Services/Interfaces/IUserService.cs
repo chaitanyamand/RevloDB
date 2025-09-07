@@ -1,5 +1,3 @@
-using RevloDB.DTOs;
-
 namespace RevloDB.Services.Interfaces
 {
     public interface IUserService

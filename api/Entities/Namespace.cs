@@ -11,7 +11,7 @@ namespace RevloDB.Entities
         [StringLength(500)]
         public string? Description { get; set; }
         public DateTime CreatedAt { get; set; }
-        public int CreatedByUserId { get; set; }
+        public int? CreatedByUserId { get; set; }
         public bool IsDeleted { get; set; } = false;
         public User CreatedByUser { get; set; } = null!;
         public ICollection<Key> Keys { get; set; } = new List<Key>();

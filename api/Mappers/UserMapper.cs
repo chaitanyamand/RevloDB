@@ -1,5 +1,4 @@
 using AutoMapper;
-using RevloDB.DTOs;
 using RevloDB.Entities;
 
 public class UserMappingProfile : Profile

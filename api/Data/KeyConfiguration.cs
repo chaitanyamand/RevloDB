@@ -38,7 +38,8 @@ namespace RevloDB.Data.Configurations
 
             builder.HasIndex(k => new { k.KeyName, k.NamespaceId })
                 .IsUnique()
-                .HasDatabaseName("ix_keys_key_name_namespace_id");
+                .HasFilter("is_deleted = FALSE")
+                .HasDatabaseName("ix_keys_unique_active_key_name_namespace_id");
 
             builder.HasIndex(k => k.IsDeleted)
                 .HasFilter("is_deleted = TRUE")

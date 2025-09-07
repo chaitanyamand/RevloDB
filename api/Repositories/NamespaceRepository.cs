@@ -1,0 +1,147 @@
+using Microsoft.EntityFrameworkCore;
+using Npgsql;
+using RevloDB.Data;
+using RevloDB.Entities;
+using RevloDB.Repositories.Interfaces;
+
+namespace RevloDB.Repositories
+{
+    public class NamespaceRepository : INamespaceRepository
+    {
+        private readonly RevloDbContext _context;
+
+        public NamespaceRepository(RevloDbContext context)
+        {
+            _context = context;
+        }
+
+        public async Task<Namespace?> GetByIdAsync(int id)
+        {
+            return await _context.Namespaces
+                .AsNoTracking()
+                .Where(n => !n.IsDeleted)
+                .FirstOrDefaultAsync(n => n.Id == id);
+        }
+
+        public async Task<Namespace?> GetByNameAsync(string namespaceName)
+        {
+            return await _context.Namespaces
+                .AsNoTracking()
+                .Where(n => !n.IsDeleted)
+                .FirstOrDefaultAsync(n => n.Name == namespaceName);
+        }
+
+        public async Task<Namespace> CreateAsync(string namespaceName, int createdByUserId)
+        {
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                var ns = new Namespace
+                {
+                    Name = namespaceName,
+                    CreatedAt = DateTime.UtcNow,
+                    IsDeleted = false,
+                    CreatedByUserId = createdByUserId
+                };
+
+                _context.Namespaces.Add(ns);
+
+                await _context.SaveChangesAsync();
+
+                _context.UserNamespaces.Add(new UserNamespace
+                {
+                    UserId = createdByUserId,
+                    NamespaceId = ns.Id,
+                    GrantedAt = DateTime.UtcNow,
+                    Role = NamespaceRole.Admin
+                });
+                await _context.SaveChangesAsync();
+
+                await transaction.CommitAsync();
+
+                return ns;
+            }
+            catch (DbUpdateException ex)
+                when (ex.InnerException is PostgresException postgresEx && postgresEx.SqlState == "23505")
+            {
+                await transaction.RollbackAsync();
+                throw new InvalidOperationException($"Namespace '{namespaceName}' already exists for this user.");
+            }
+            catch (Exception)
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+        }
+
+        public async Task<Namespace> UpdateNameAsync(string newName, int id)
+        {
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                var ns = await _context.Namespaces
+                    .Where(n => !n.IsDeleted)
+                    .FirstOrDefaultAsync(n => n.Id == id);
+
+                if (ns == null)
+                {
+                    throw new KeyNotFoundException($"Namespace with ID '{id}' not found");
+                }
+
+                ns.Name = newName;
+                await _context.SaveChangesAsync();
+
+                await transaction.CommitAsync();
+
+                return ns;
+            }
+            catch (KeyNotFoundException)
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+            catch (DbUpdateException ex)
+                when (ex.InnerException is PostgresException postgresEx && postgresEx.SqlState == "23505")
+            {
+                await transaction.RollbackAsync();
+                throw new InvalidOperationException($"Namespace '{newName}' already exists for this user.");
+            }
+            catch (Exception)
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+        }
+
+        public async Task DeleteAsync(int id)
+        {
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                var ns = await _context.Namespaces
+                    .Where(n => !n.IsDeleted)
+                    .FirstOrDefaultAsync(n => n.Id == id);
+
+                if (ns == null)
+                {
+                    throw new KeyNotFoundException($"Namespace with ID '{id}' not found");
+                }
+
+                ns.IsDeleted = true;
+                await _context.SaveChangesAsync();
+
+                await transaction.CommitAsync();
+            }
+            catch (KeyNotFoundException)
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+            catch (Exception)
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+        }
+    }
+}

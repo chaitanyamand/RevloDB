@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using RevloDB.Entities;
 using Version = RevloDB.Entities.Version;
 
 namespace RevloDB.Data.Configurations

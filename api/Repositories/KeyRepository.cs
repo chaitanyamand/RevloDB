@@ -102,15 +102,22 @@ namespace RevloDB.Repositories
             var key = await _context.Keys
                 .Where(k => k.IsDeleted && k.NamespaceId == namespaceId)
                 .FirstOrDefaultAsync(k => k.KeyName == keyName);
+            if (key == null)
+            {
+                return false;
+            }
+            var exists = await _context.Keys
+                .AnyAsync(k => k.KeyName == keyName && k.NamespaceId == namespaceId && !k.IsDeleted);
 
-            if (key == null) return false;
-
+            if (exists)
+            {
+                throw new InvalidOperationException($"Cannot restore key '{keyName}': an active key with the same name already exists.");
+            }
             key.IsDeleted = false;
-
             await _context.SaveChangesAsync();
-
             return true;
         }
+
 
         public async Task<IEnumerable<Key>> GetAllAsync(int namespaceId)
         {

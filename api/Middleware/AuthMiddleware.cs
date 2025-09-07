@@ -5,8 +5,9 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using RevloDB.Filters;
-using RevloDB.Utils;
 using RevloDB.Constants;
+using RevloDB.Utility;
+using RevloDB.Configuration;
 
 namespace RevloDB.Middleware
 {
@@ -14,13 +15,13 @@ namespace RevloDB.Middleware
     {
         private readonly RequestDelegate _next;
         private readonly ILogger<JwtAuthMiddleware> _logger;
-        private readonly TokenValidationParameters _validationParams;
+        private readonly AuthOptions _authOptions;
 
-        public JwtAuthMiddleware(RequestDelegate next, ILogger<JwtAuthMiddleware> logger, TokenValidationParameters validationParams)
+        public JwtAuthMiddleware(RequestDelegate next, ILogger<JwtAuthMiddleware> logger, AuthOptions authOptions)
         {
             _next = next;
             _logger = logger;
-            _validationParams = validationParams;
+            _authOptions = authOptions;
         }
 
         public async Task InvokeAsync(HttpContext context)
@@ -44,9 +45,9 @@ namespace RevloDB.Middleware
             try
             {
                 var handler = new JwtSecurityTokenHandler();
-                var principal = handler.ValidateToken(token, _validationParams, out var validatedToken);
+                var principal = JwtUtil.ValidateToken(token, _authOptions.Jwt.Key);
 
-                if (validatedToken is not JwtSecurityToken)
+                if (principal == null)
                 {
                     await WriteUnauthorizedAsync(context, "Invalid token format.");
                     return;
@@ -110,11 +111,5 @@ namespace RevloDB.Middleware
 
             await context.Response.WriteAsync(json);
         }
-    }
-
-    public static class JwtAuthMiddlewareExtensions
-    {
-        public static IApplicationBuilder UseJwtAuth(this IApplicationBuilder app, TokenValidationParameters tvp)
-            => app.UseMiddleware<JwtAuthMiddleware>(tvp);
     }
 }

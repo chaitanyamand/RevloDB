@@ -20,16 +20,16 @@ namespace RevloDB.Data.Configurations
 
             builder.Property(u => u.Email)
                 .HasColumnName("email")
-                .HasMaxLength(255)
-                .IsRequired();
+                .HasMaxLength(255);
+
 
             builder.Property(u => u.PasswordHash)
                 .HasColumnName("password_hash")
                 .IsRequired();
 
-            builder.Property(u => u.ApiKey)
-                .HasColumnName("api_key")
-                .HasMaxLength(255);
+            builder.Property(u => u.PasswordSalt)
+                .HasColumnName("password_salt")
+                .IsRequired();
 
             builder.Property(u => u.CreatedAt)
                 .HasColumnName("created_at")
@@ -42,27 +42,31 @@ namespace RevloDB.Data.Configurations
             // Indexes
             builder.HasIndex(u => u.Username)
                 .IsUnique()
+                .HasFilter("is_deleted = FALSE")
                 .HasDatabaseName("ix_users_username");
 
             builder.HasIndex(u => u.IsDeleted)
                 .HasFilter("is_deleted = TRUE")
                 .HasDatabaseName("ix_users_is_deleted_true");
 
-            builder.HasIndex(u => u.Email)
-                .IsUnique()
-                .HasDatabaseName("ix_users_email");
-
-            builder.HasIndex(u => u.ApiKey)
-                .IsUnique()
-                .HasFilter("api_key IS NOT NULL")
-                .HasDatabaseName("ix_users_api_key");
-
             // Relationships
             builder.HasMany(u => u.CreatedNamespaces)
                 .WithOne(n => n.CreatedByUser)
                 .HasForeignKey(n => n.CreatedByUserId)
-                .OnDelete(DeleteBehavior.Restrict)
+                .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("fk_namespaces_users_created_by_user_id");
+
+            builder.HasMany(u => u.UserNamespaces)
+                .WithOne(un => un.User)
+                .HasForeignKey(un => un.UserId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("fk_user_namespaces_users_user_id");
+
+            builder.HasMany(u => u.ApiKeys)
+                .WithOne(a => a.User)
+                .HasForeignKey(a => a.UserId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("fk_api_keys_users_user_id");
         }
     }
 }

@@ -36,6 +36,7 @@ namespace RevloDB.Data.Configurations
             // Indexes
             builder.HasIndex(n => new { n.Name, n.CreatedByUserId })
                 .IsUnique()
+                .HasFilter("is_deleted = FALSE")
                 .HasDatabaseName("ix_namespaces_name_created_by_user_id");
 
             builder.HasIndex(n => n.IsDeleted)
@@ -44,6 +45,31 @@ namespace RevloDB.Data.Configurations
 
             builder.HasIndex(n => n.CreatedByUserId)
                 .HasDatabaseName("ix_namespaces_created_by_user_id");
+
+            //Relationships
+            builder.HasOne(n => n.CreatedByUser)
+                .WithMany(u => u.CreatedNamespaces)
+                .HasForeignKey(n => n.CreatedByUserId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("fk_namespaces_users_created_by_user_id");
+
+            builder.HasMany(n => n.UserNamespaces)
+                .WithOne(un => un.Namespace)
+                .HasForeignKey(un => un.NamespaceId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("fk_user_namespaces_namespaces_namespace_id");
+
+            builder.HasMany(n => n.ApiKeys)
+                .WithOne(a => a.Namespace)
+                .HasForeignKey(a => a.NamespaceId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("fk_api_keys_namespaces_namespace_id");
+
+            builder.HasMany(n => n.Keys)
+                .WithOne(k => k.Namespace)
+                .HasForeignKey(k => k.NamespaceId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("fk_keys_namespaces_namespace_id");
         }
     }
 }

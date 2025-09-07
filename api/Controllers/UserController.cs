@@ -1,9 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
-using RevloDB.DTOs;
 using RevloDB.Extensions;
 using RevloDB.Filters;
 using RevloDB.Services.Interfaces;
-using RevloDB.Utils;
+using RevloDB.Utility;
 
 namespace RevloDB.Controllers
 {
@@ -43,16 +42,8 @@ namespace RevloDB.Controllers
         public async Task<IActionResult> DeleteUser()
         {
             var currentUserId = ControllerUtil.GetUserIdFromHTTPContext(HttpContext);
-
-            try
-            {
-                await _userService.DeleteUserAsync(currentUserId);
-                return NoContent();
-            }
-            catch (InvalidOperationException ex)
-            {
-                return this.BadRequestProblem(ex.Message);
-            }
+            await _userService.DeleteUserAsync(currentUserId);
+            return NoContent();
         }
     }
 }

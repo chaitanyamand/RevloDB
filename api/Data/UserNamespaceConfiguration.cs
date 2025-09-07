@@ -28,9 +28,6 @@ namespace RevloDB.Data.Configurations
                 .HasDefaultValueSql("NOW()");
 
             // Indexes
-            builder.HasIndex(un => un.UserId)
-                .HasDatabaseName("ix_user_namespaces_user_id");
-
             builder.HasIndex(un => un.NamespaceId)
                 .HasDatabaseName("ix_user_namespaces_namespace_id");
 

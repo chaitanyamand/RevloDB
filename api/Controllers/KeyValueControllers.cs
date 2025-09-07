@@ -3,7 +3,7 @@ using RevloDB.DTOs;
 using RevloDB.Services.Interfaces;
 using RevloDB.Extensions;
 using RevloDB.Filters;
-using RevloDB.Utils;
+using RevloDB.Utility;
 
 namespace RevloDB.Controllers
 {

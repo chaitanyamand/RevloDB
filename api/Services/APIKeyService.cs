@@ -1,7 +1,9 @@
 using System.Security.Cryptography;
-using Microsoft.AspNetCore.Identity;
 using RevloDB.Entities;
+using RevloDB.Extensions;
+using RevloDB.Repositories.Interfaces;
 using RevloDB.Services.Interfaces;
+using RevloDB.Utility;
 
 namespace RevloDB.Services
 {
@@ -9,39 +11,46 @@ namespace RevloDB.Services
     {
         private readonly IUserRepository _userRepository;
         private readonly INamespaceRepository _namespaceRepository;
-        private readonly IApiKeyRepository _apiKeyRepository;
+        private readonly IAPIKeyRepository _apiKeyRepository;
+        private readonly IUserNamespaceRepository _userNamespaceRepository;
 
         public APIKeyService(
             IUserRepository userRepository,
             INamespaceRepository namespaceRepository,
-            IApiKeyRepository apiKeyRepository)
+            IAPIKeyRepository apiKeyRepository,
+            IUserNamespaceRepository userNamespaceRepository)
         {
             _userRepository = userRepository;
             _namespaceRepository = namespaceRepository;
             _apiKeyRepository = apiKeyRepository;
+            _userNamespaceRepository = userNamespaceRepository;
         }
 
-        public async Task<ApiKeyDto> CreateApiKeyAsync(int userId, CreateApiKeyDto createApiKeyDto, int namespaceId)
+        public async Task<ApiKeyDto> CreateApiKeyAsync(int userId, CreateApiKeyDto createApiKeyDto)
         {
-            // Verify user exists
-            var user = await _userRepository.GetByIdAsync(userId);
-            if (user == null || user.IsDeleted)
+            var namespaceId = createApiKeyDto.NamespaceId;
+            var roleForAPIKey = createApiKeyDto.Role.ToEnumOrThrow<NamespaceRole>("Invalid role specified for API key");
+            (bool isValidExpiry, string? expiryError) = ValidateExpiryTime(createApiKeyDto.ExpiresAtInDays);
+            if (!isValidExpiry)
             {
-                throw new InvalidOperationException("User not found");
+                throw new ArgumentException(expiryError);
             }
+            var apiKeyExpiresAt = createApiKeyDto.ExpiresAtInDays.HasValue
+                ? DateTime.UtcNow.AddDays(createApiKeyDto.ExpiresAtInDays.Value)
+                : DateTime.UtcNow.AddDays(14);
+            var apiKeyDescription = createApiKeyDto.Description;
 
-            // Verify namespace exists and user has permission
-            var userNamespace = await _userRepository.GetUserNamespaceAsync(userId, namespaceId);
-            if (userNamespace == null)
+            var userNamespaceEntry = await _userNamespaceRepository.GetUserNamespaceEntryAsync(userId, namespaceId);
+
+            if (userNamespaceEntry == null)
             {
                 throw new UnauthorizedAccessException("You don't have access to this namespace");
             }
 
-            // Validate role (assuming roles like "read", "write", "admin")
-            var validRoles = new[] { "read", "write", "admin" };
-            if (!validRoles.Contains(createApiKeyDto.Role.ToLowerInvariant()))
+            var hasSufficientRole = RoleCheckUtil.HasSufficientRole(userNamespaceEntry.Role, roleForAPIKey);
+            if (!hasSufficientRole)
             {
-                throw new InvalidOperationException($"Invalid role. Valid roles are: {string.Join(", ", validRoles)}");
+                throw new UnauthorizedAccessException("You don't have sufficient role to create an API key with the requested role");
             }
 
             var apiKey = new ApiKey
@@ -49,45 +58,42 @@ namespace RevloDB.Services
                 UserId = userId,
                 NamespaceId = namespaceId,
                 KeyValue = GenerateApiKey(),
-                Role = createApiKeyDto.Role.ToLowerInvariant(),
-                Description = createApiKeyDto.Description,
+                Role = roleForAPIKey,
+                Description = apiKeyDescription,
                 CreatedAt = DateTime.UtcNow,
-                ExpiresAt = createApiKeyDto.ExpiresAt,
+                ExpiresAt = apiKeyExpiresAt,
                 IsDeleted = false
             };
 
             var createdApiKey = await _apiKeyRepository.CreateAsync(apiKey);
-            var namespaceInfo = await _namespaceRepository.GetByIdAsync(namespaceId);
-
             return new ApiKeyDto
             {
                 Id = createdApiKey.Id,
                 KeyValue = createdApiKey.KeyValue,
-                Role = createdApiKey.Role,
+                Role = createdApiKey.Role.ToString(),
                 Description = createdApiKey.Description,
                 NamespaceId = createdApiKey.NamespaceId,
-                NamespaceName = namespaceInfo?.Name ?? "",
+                NamespaceName = userNamespaceEntry.Namespace.Name,
                 CreatedAt = createdApiKey.CreatedAt,
                 ExpiresAt = createdApiKey.ExpiresAt
             };
         }
-
         public async Task<IEnumerable<ApiKeyDto>> GetUserApiKeysAsync(int userId)
         {
             var apiKeys = await _apiKeyRepository.GetByUserIdAsync(userId);
+            var activeApiKeys = apiKeys.Where(ak => !ak.IsDeleted && ak.ExpiresAt > DateTime.UtcNow);
             var result = new List<ApiKeyDto>();
 
-            foreach (var apiKey in apiKeys.Where(ak => !ak.IsDeleted))
+            foreach (var apiKey in activeApiKeys)
             {
-                var namespaceInfo = await _namespaceRepository.GetByIdAsync(apiKey.NamespaceId);
                 result.Add(new ApiKeyDto
                 {
                     Id = apiKey.Id,
                     KeyValue = MaskApiKey(apiKey.KeyValue),
-                    Role = apiKey.Role,
+                    Role = apiKey.Role.ToString(),
                     Description = apiKey.Description,
                     NamespaceId = apiKey.NamespaceId,
-                    NamespaceName = namespaceInfo?.Name ?? "",
+                    NamespaceName = apiKey.Namespace.Name ?? "",
                     CreatedAt = apiKey.CreatedAt,
                     ExpiresAt = apiKey.ExpiresAt
                 });
@@ -100,7 +106,7 @@ namespace RevloDB.Services
         {
             var apiKey = await _apiKeyRepository.GetByIdAsync(apiKeyId);
 
-            if (apiKey == null || apiKey.IsDeleted)
+            if (apiKey == null)
             {
                 throw new InvalidOperationException("API key not found");
             }
@@ -128,6 +134,19 @@ namespace RevloDB.Services
                 return apiKey;
 
             return apiKey.Substring(0, 4) + new string('*', apiKey.Length - 8) + apiKey.Substring(apiKey.Length - 4);
+        }
+
+        private (bool IsValid, string? Error) ValidateExpiryTime(int? expiresAtInDays)
+        {
+            if (expiresAtInDays.HasValue && expiresAtInDays <= 0)
+            {
+                return (false, "Expiry time must be a positive integer");
+            }
+            else if (expiresAtInDays.HasValue && expiresAtInDays > 30)
+            {
+                return (false, "Expiry time cannot exceed 30 days");
+            }
+            return (true, null);
         }
 
     }

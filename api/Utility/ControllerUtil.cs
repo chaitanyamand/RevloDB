@@ -1,6 +1,6 @@
 using RevloDB.Constants;
 
-namespace RevloDB.Utils
+namespace RevloDB.Utility
 {
     public static class ControllerUtil
     {

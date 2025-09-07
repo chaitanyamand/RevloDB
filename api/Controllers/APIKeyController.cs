@@ -1,9 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
-using RevloDB.DTOs;
 using RevloDB.Extensions;
 using RevloDB.Filters;
 using RevloDB.Services.Interfaces;
-using RevloDB.Utils;
+using RevloDB.Utility;
 
 
 namespace RevloDB.Controllers
@@ -27,9 +26,8 @@ namespace RevloDB.Controllers
             {
                 return this.ModelValidationProblem(ModelState);
             }
-            var namespaceId = ControllerUtil.GetNameSpaceIdFromHTTPContext(HttpContext);
             var currentUserId = ControllerUtil.GetUserIdFromHTTPContext(HttpContext);
-            var apiKey = await _apiKeyService.CreateApiKeyAsync(currentUserId, createApiKeyDto, namespaceId);
+            var apiKey = await _apiKeyService.CreateApiKeyAsync(currentUserId, createApiKeyDto);
             return CreatedAtAction(nameof(GetApiKeys), new { }, apiKey);
         }
 

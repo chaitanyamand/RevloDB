@@ -1,4 +1,4 @@
-namespace RevloDB.Utils
+namespace RevloDB.Utility
 {
     public static class HttpContextUtils
     {
