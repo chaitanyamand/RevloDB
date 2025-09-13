@@ -14,7 +14,6 @@ namespace RevloDB.Data
 
         public DbSet<Key> Keys { get; set; }
         public DbSet<Version> Versions { get; set; }
-
         public DbSet<User> Users { get; set; }
         public DbSet<Namespace> Namespaces { get; set; }
         public DbSet<UserNamespace> UserNamespaces { get; set; }

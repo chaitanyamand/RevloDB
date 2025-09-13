@@ -31,8 +31,7 @@ namespace RevloDB.Repositories
                 .Where(k => k.IsDeleted)
                 .ExecuteDeleteAsync(cancellationToken);
 
-            _logger.LogDebug("Deleted {Count} keys with their versions", deletedCount);
-
+            _logger.LogDebug("Deleted {Count} marked keys", deletedCount);
             return deletedCount;
         }
 
@@ -43,48 +42,11 @@ namespace RevloDB.Repositories
 
         public async Task<int> DeleteMarkedUsersAsync(CancellationToken cancellationToken = default)
         {
-            // Get users to be deleted for logging
-            var usersToDelete = await _context.Users
-                .Where(u => u.IsDeleted)
-                .Select(u => new { u.Id, u.Username })
-                .ToListAsync(cancellationToken);
-
-            if (usersToDelete.Count == 0)
-            {
-                _logger.LogDebug("No inactive users found to delete");
-                return 0;
-            }
-
-            var userIds = usersToDelete.Select(u => u.Id).ToList();
-            var usersWithActiveNamespaces = await _context.Namespaces
-                .Where(n => n.CreatedByUserId.HasValue && userIds.Contains(n.CreatedByUserId.Value) && !n.IsDeleted)
-                .Select(n => n.CreatedByUserId)
-                .Distinct()
-                .ToListAsync(cancellationToken);
-
-            if (usersWithActiveNamespaces.Count > 0)
-            {
-                var conflictUsers = usersToDelete.Where(u => usersWithActiveNamespaces.Contains(u.Id)).ToList();
-                _logger.LogWarning("Cannot delete {Count} users as they have active namespaces: {Users}",
-                    conflictUsers.Count, string.Join(", ", conflictUsers.Select(u => u.Username)));
-
-                usersToDelete = usersToDelete.Where(u => !usersWithActiveNamespaces.Contains(u.Id)).ToList();
-            }
-
-            if (usersToDelete.Count == 0)
-            {
-                _logger.LogDebug("No users eligible for deletion after dependency check");
-                return 0;
-            }
-
-            var eligibleUserIds = usersToDelete.Select(u => u.Id).ToList();
             var deletedCount = await _context.Users
-                .Where(u => eligibleUserIds.Contains(u.Id))
+                .Where(u => u.IsDeleted)
                 .ExecuteDeleteAsync(cancellationToken);
 
-            _logger.LogDebug("Deleted {Count} inactive users: {Users}",
-                deletedCount, string.Join(", ", usersToDelete.Select(u => u.Username)));
-
+            _logger.LogDebug("Deleted {Count} marked users", deletedCount);
             return deletedCount;
         }
 
@@ -95,36 +57,52 @@ namespace RevloDB.Repositories
 
         public async Task<int> DeleteMarkedNamespacesAsync(CancellationToken cancellationToken = default)
         {
-            var namespacesToDelete = await _context.Namespaces
-                .Where(n => n.IsDeleted)
-                .Select(n => new { n.Id, n.Name })
-                .ToListAsync(cancellationToken);
-
-            if (!namespacesToDelete.Any())
-            {
-                _logger.LogDebug("No inactive namespaces found to delete");
-                return 0;
-            }
-
-            var namespaceIds = namespacesToDelete.Select(n => n.Id).ToList();
-
             await _context.Keys
-                .Where(k => namespaceIds.Contains(k.NamespaceId))
+                .Where(k => _context.Namespaces.Any(n => n.Id == k.NamespaceId && n.IsDeleted))
                 .ExecuteUpdateAsync(s => s.SetProperty(k => k.CurrentVersionId, k => null), cancellationToken);
 
-            _logger.LogDebug("Cleared CurrentVersionId references for keys in {Count} namespaces", namespaceIds.Count);
-
             var deletedCount = await _context.Namespaces
-                .Where(n => namespaceIds.Contains(n.Id))
+                .Where(n => n.IsDeleted)
                 .ExecuteDeleteAsync(cancellationToken);
 
-            _logger.LogDebug("Deleted {Count} inactive namespaces: {Namespaces}",
-                deletedCount, string.Join(", ", namespacesToDelete.Select(n => n.Name)));
-
+            _logger.LogDebug("Deleted {Count} marked namespaces", deletedCount);
             return deletedCount;
         }
 
-        public async Task<CleanupResult> PerformFullCleanupAsync(CancellationToken cancellationToken = default)
+        public async Task<int> GetMarkedApiKeysCountAsync(CancellationToken cancellationToken = default)
+        {
+            return await _context.ApiKeys.CountAsync(a => a.IsDeleted, cancellationToken);
+        }
+
+        public async Task<int> DeleteMarkedApiKeysAsync(CancellationToken cancellationToken = default)
+        {
+            var deletedCount = await _context.ApiKeys
+                .Where(a => a.IsDeleted)
+                .ExecuteDeleteAsync(cancellationToken);
+
+            _logger.LogDebug("Deleted {Count} marked API keys", deletedCount);
+            return deletedCount;
+        }
+
+        public async Task<int> GetExpiredApiKeysCountAsync(CancellationToken cancellationToken = default)
+        {
+            var now = DateTime.UtcNow;
+            return await _context.ApiKeys
+                .CountAsync(a => !a.IsDeleted && a.ExpiresAt.HasValue && a.ExpiresAt.Value <= now, cancellationToken);
+        }
+
+        public async Task<int> DeleteExpiredApiKeysAsync(CancellationToken cancellationToken = default)
+        {
+            var now = DateTime.UtcNow;
+            var deletedCount = await _context.ApiKeys
+                .Where(a => !a.IsDeleted && a.ExpiresAt.HasValue && a.ExpiresAt.Value <= now)
+                .ExecuteDeleteAsync(cancellationToken);
+
+            _logger.LogDebug("Deleted {Count} expired API keys", deletedCount);
+            return deletedCount;
+        }
+
+        public async Task<CleanupResult> PerformFullCleanupAsync(bool includeExpiredApiKeys = true, CancellationToken cancellationToken = default)
         {
             _logger.LogInformation("Starting full cleanup operation");
 
@@ -135,9 +113,15 @@ namespace RevloDB.Repositories
                 result.DeletedKeys = await DeleteMarkedKeysAsync(cancellationToken);
                 result.DeletedNamespaces = await DeleteMarkedNamespacesAsync(cancellationToken);
                 result.DeletedUsers = await DeleteMarkedUsersAsync(cancellationToken);
+                result.DeletedApiKeys = await DeleteMarkedApiKeysAsync(cancellationToken);
 
-                _logger.LogInformation("Full cleanup completed successfully. Deleted: {Keys} keys, {Namespaces} namespaces, {Users} users",
-                    result.DeletedKeys, result.DeletedNamespaces, result.DeletedUsers);
+                if (includeExpiredApiKeys)
+                {
+                    result.DeletedExpiredApiKeys = await DeleteExpiredApiKeysAsync(cancellationToken);
+                }
+
+                _logger.LogInformation("Full cleanup completed. Deleted: {Keys} keys, {Namespaces} namespaces, {Users} users, {ApiKeys} API keys, {ExpiredApiKeys} expired API keys",
+                    result.DeletedKeys, result.DeletedNamespaces, result.DeletedUsers, result.DeletedApiKeys, result.DeletedExpiredApiKeys);
             }
             catch (Exception ex)
             {
@@ -150,14 +134,14 @@ namespace RevloDB.Repositories
 
         public async Task<CleanupSummary> GetCleanupSummaryAsync(CancellationToken cancellationToken = default)
         {
-            var summary = new CleanupSummary
+            return new CleanupSummary
             {
                 MarkedKeysCount = await GetMarkedKeysCountAsync(cancellationToken),
                 MarkedUsersCount = await GetMarkedUsersCountAsync(cancellationToken),
-                MarkedNamespacesCount = await GetMarkedNamespacesCountAsync(cancellationToken)
+                MarkedNamespacesCount = await GetMarkedNamespacesCountAsync(cancellationToken),
+                MarkedApiKeysCount = await GetMarkedApiKeysCountAsync(cancellationToken),
+                ExpiredApiKeysCount = await GetExpiredApiKeysCountAsync(cancellationToken)
             };
-
-            return summary;
         }
     }
 }

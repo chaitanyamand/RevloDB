@@ -128,8 +128,24 @@ namespace RevloDB.Repositories
                 }
 
                 ns.IsDeleted = true;
-                await _context.SaveChangesAsync();
 
+                var apiKeys = await _context.ApiKeys
+                    .Where(a => a.NamespaceId == id && !a.IsDeleted)
+                    .ToListAsync();
+                foreach (var apiKey in apiKeys)
+                {
+                    apiKey.IsDeleted = true;
+                }
+
+                var keys = await _context.Keys
+                    .Where(k => k.NamespaceId == id && !k.IsDeleted)
+                    .ToListAsync();
+                foreach (var key in keys)
+                {
+                    key.IsDeleted = true;
+                }
+
+                await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
             }
             catch (KeyNotFoundException)
@@ -143,5 +159,6 @@ namespace RevloDB.Repositories
                 throw;
             }
         }
+
     }
 }

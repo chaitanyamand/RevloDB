@@ -8,6 +8,7 @@ using RevloDB.Filters;
 using RevloDB.Constants;
 using RevloDB.Utility;
 using RevloDB.Configuration;
+using Microsoft.Extensions.Options;
 
 namespace RevloDB.Middleware
 {
@@ -17,11 +18,11 @@ namespace RevloDB.Middleware
         private readonly ILogger<JwtAuthMiddleware> _logger;
         private readonly AuthOptions _authOptions;
 
-        public JwtAuthMiddleware(RequestDelegate next, ILogger<JwtAuthMiddleware> logger, AuthOptions authOptions)
+        public JwtAuthMiddleware(RequestDelegate next, ILogger<JwtAuthMiddleware> logger, IOptions<AuthOptions> authOptions)
         {
             _next = next;
             _logger = logger;
-            _authOptions = authOptions;
+            _authOptions = authOptions.Value;
         }
 
         public async Task InvokeAsync(HttpContext context)

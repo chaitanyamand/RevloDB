@@ -1,4 +1,5 @@
 using AutoMapper;
+using Microsoft.Extensions.Options;
 using RevloDB.Configuration;
 using RevloDB.DTOs;
 using RevloDB.Repositories.Interfaces;
@@ -17,11 +18,11 @@ namespace RevloDB.Services
         public UserAuthService(
             IUserRepository userRepository,
             IMapper mapper,
-            AuthOptions authOptions)
+            IOptions<AuthOptions> authOptions)
         {
             _userRepository = userRepository;
             _mapper = mapper;
-            _authOptions = authOptions;
+            _authOptions = authOptions.Value;
         }
 
         public async Task<UserDto> SignUpAsync(SignUpDto signUpDto)

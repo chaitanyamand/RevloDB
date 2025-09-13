@@ -114,8 +114,15 @@ namespace RevloDB.Repositories
 
                 user.IsDeleted = true;
 
-                await _context.SaveChangesAsync();
+                var apiKeys = await _context.ApiKeys
+                    .Where(a => a.UserId == id && !a.IsDeleted)
+                    .ToListAsync();
+                foreach (var apiKey in apiKeys)
+                {
+                    apiKey.IsDeleted = true;
+                }
 
+                await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
             }
             catch (KeyNotFoundException)
@@ -129,5 +136,6 @@ namespace RevloDB.Repositories
                 throw;
             }
         }
+
     }
 }

@@ -26,7 +26,12 @@ namespace RevloDB.Controllers
             }
 
             var user = await _userAuthService.SignUpAsync(signUpDto);
-            return CreatedAtAction(nameof(UserController.GetUser), new { userId = user.Id }, user);
+            return CreatedAtAction(
+                nameof(UserController.GetUser),
+                "User",
+                new { userId = user.Id },
+                user
+            );
         }
 
         [HttpPost("login")]
