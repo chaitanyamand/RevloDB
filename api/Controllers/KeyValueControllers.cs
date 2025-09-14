@@ -4,6 +4,7 @@ using RevloDB.Services.Interfaces;
 using RevloDB.Extensions;
 using RevloDB.Filters;
 using RevloDB.Utility;
+using System.ComponentModel;
 
 namespace RevloDB.Controllers
 {
@@ -28,6 +29,8 @@ namespace RevloDB.Controllers
         }
 
         [HttpGet("{keyName}")]
+        [AuthRequired]
+        [Read]
         public async Task<ActionResult<KeyDto>> GetKey(string keyName)
         {
             var namespaceId = ControllerUtil.GetNameSpaceIdFromHTTPContext(HttpContext);

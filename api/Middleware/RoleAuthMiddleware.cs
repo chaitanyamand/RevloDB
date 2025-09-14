@@ -58,10 +58,12 @@ namespace RevloDB.Middleware
                     await WriteForbiddenAsync(context, "Invalid user or namespace identifier.");
                     return;
                 }
-                var hasRole = await dbContext.UserNamespaces
-                    .AnyAsync(un => un.UserId == parsedUserId &&
-                                   un.NamespaceId == parsedNamespaceId &&
-                                   RoleCheckUtil.HasSufficientRole(un.Role, roleAttribute.RequiredRole));
+                var userNamespace = await dbContext.UserNamespaces
+                    .FirstOrDefaultAsync(un => un.UserId == parsedUserId &&
+                                                un.NamespaceId == parsedNamespaceId);
+
+                var hasRole = userNamespace != null &&
+                              RoleCheckUtil.HasSufficientRole(userNamespace.Role, roleAttribute.RequiredRole);
 
                 if (!hasRole)
                 {
@@ -86,7 +88,44 @@ namespace RevloDB.Middleware
         {
             if (context.Request.Query.TryGetValue("namespaceId", out var queryNs))
                 return queryNs.ToString();
+            (bool hasNs, var bodyNs) = DoesNamespaceIdExistInRequestBodyAsync(context).GetAwaiter().GetResult();
+            if (hasNs && !string.IsNullOrWhiteSpace(bodyNs))
+                return bodyNs;
+
             return null;
+        }
+
+        private static async Task<(bool, string?)> DoesNamespaceIdExistInRequestBodyAsync(HttpContext context)
+        {
+            if (context.Request.Method != HttpMethods.Post && context.Request.Method != HttpMethods.Put)
+                return (false, null);
+
+            if (context.Request.ContentType != null && context.Request.ContentType.Contains("application/json"))
+            {
+                context.Request.EnableBuffering();
+                using var reader = new StreamReader(context.Request.Body, leaveOpen: true);
+                var body = await reader.ReadToEndAsync();
+                context.Request.Body.Position = 0;
+
+                if (!string.IsNullOrWhiteSpace(body))
+                {
+                    try
+                    {
+                        using var jsonDoc = JsonDocument.Parse(body);
+                        if (jsonDoc.RootElement.TryGetProperty("namespaceId", out var nsElement))
+                        {
+                            var namespaceId = nsElement.GetRawText().Trim('"');
+                            return (true, namespaceId);
+                        }
+                    }
+                    catch (JsonException)
+                    {
+                        // Ignore JSON parsing errors for this check.
+                    }
+                }
+            }
+
+            return (false, null);
         }
 
         private static async Task WriteForbiddenAsync(HttpContext context, string detail)

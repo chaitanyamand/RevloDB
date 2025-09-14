@@ -57,7 +57,6 @@ namespace RevloDB.Controllers
 
         [HttpPost]
         [AuthRequired]
-        [Write]
         public async Task<ActionResult<NamespaceDto>> CreateNamespace([FromBody] CreateNamespaceDto createNamespaceDto)
         {
             if (!ModelState.IsValid)

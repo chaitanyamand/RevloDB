@@ -27,3 +27,5 @@ await app.InitializeDatabaseAsync();
 app.ConfigureRevloDbPipeline();
 
 app.Run();
+
+public partial class Program { }

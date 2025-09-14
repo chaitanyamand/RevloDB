@@ -98,7 +98,7 @@ namespace RevloDB.Services
             {
                 return (false, "Username must start with a letter");
             }
-            if (!Regex.IsMatch(username, "^[a-z0-9._]+$"))
+            if (!Regex.IsMatch(username, "^[a-zA-Z0-9._]+$"))
             {
                 return (false, "Username can only contain letters, numbers, dots, and underscores");
             }

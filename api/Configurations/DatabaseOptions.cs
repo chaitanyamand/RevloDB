@@ -14,7 +14,7 @@ namespace RevloDB.Configuration
         public int CommandTimeout { get; set; } = 30;
         [Required]
         public bool RetryOnFailure { get; set; } = true;
-        [Range(1, 10)]
+        [Range(0, 10)]
         [Required]
         public int MaxRetryCount { get; set; } = 3;
         [Range(1, 60)]

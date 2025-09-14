@@ -55,7 +55,7 @@ namespace RevloDB.Controllers
 
         [HttpPost("grant-access")]
         [AuthRequired]
-        [Write]
+        [Admin]
         public async Task<IActionResult> GrantUserAccess([FromBody] GrantAccessDto grantAccessDto)
         {
             if (!ModelState.IsValid)
@@ -69,7 +69,7 @@ namespace RevloDB.Controllers
 
         [HttpDelete("revoke-access")]
         [AuthRequired]
-        [Write]
+        [Admin]
         public async Task<IActionResult> RevokeUserAccess([FromBody] RevokeAccessDto revokeAccessDto)
         {
             if (!ModelState.IsValid)
