@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <Target Name="FormatCode" BeforeTargets="Build" Condition="'$(Configuration)' == 'Debug'">
-    <Exec Command="dotnet-format $(MSBuildProjectFile) --verbosity quiet" ContinueOnError="false" />
+    <Exec Command="dotnet format $(MSBuildProjectFile) --verbosity quiet" ContinueOnError="false" />
   </Target>
 
   <ItemGroup>
