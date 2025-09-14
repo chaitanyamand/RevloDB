@@ -1,4 +1,4 @@
-name: RevloDB CI
+name: RevloDB API Integration Tests
 
 on:
   push:
@@ -14,6 +14,9 @@ permissions:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api.tests
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -24,10 +27,10 @@ jobs:
           dotnet-version: 8.0.x
 
       - name: Restore dependencies
-        run: dotnet restore ./api.tests
+        run: dotnet restore
 
       - name: Build
-        run: dotnet build ./api.tests --configuration Release --no-restore
+        run: dotnet build --configuration Release --no-restore
 
       - name: Run tests
-        run: dotnet test ./api.tests --configuration Release --no-build --verbosity normal
+        run: dotnet test --configuration Release --no-build --verbosity normal
