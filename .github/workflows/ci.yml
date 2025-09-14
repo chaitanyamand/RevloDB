@@ -8,6 +8,9 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
@@ -21,10 +24,10 @@ jobs:
           dotnet-version: 8.0.x
 
       - name: Restore dependencies
-        run: dotnet restore /api.tests
+        run: dotnet restore ./api.tests
 
       - name: Build
-        run: dotnet build /api.tests --configuration Release --no-restore
+        run: dotnet build ./api.tests --configuration Release --no-restore
 
       - name: Run tests
-        run: dotnet test /api.tests --configuration Release --no-build --verbosity normal
+        run: dotnet test ./api.tests --configuration Release --no-build --verbosity normal
