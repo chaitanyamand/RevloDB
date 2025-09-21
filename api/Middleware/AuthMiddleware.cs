@@ -79,7 +79,6 @@ namespace RevloDB.Middleware
                 }
 
                 context.SetItem(APIConstants.USER_ID, userId);
-                await _next(context);
             }
             catch (SecurityTokenException ex)
             {
@@ -91,6 +90,7 @@ namespace RevloDB.Middleware
                 _logger.LogError(ex, "Unexpected error during token validation.");
                 await WriteUnauthorizedAsync(context, "Authorization error.");
             }
+            await _next(context);
         }
 
         private async Task ProcessApiKeyAuthenticationAsync(HttpContext context, string apiKey)

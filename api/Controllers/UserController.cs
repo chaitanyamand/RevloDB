@@ -17,7 +17,7 @@ namespace RevloDB.Controllers
             _userService = userService;
         }
 
-        [HttpGet("user/{userId}")]
+        [HttpGet("{userId}")]
         [AuthRequired]
         public async Task<ActionResult<UserDto>> GetUser(int userId)
         {
@@ -37,7 +37,7 @@ namespace RevloDB.Controllers
             return Ok(user);
         }
 
-        [HttpDelete("user")]
+        [HttpDelete]
         [AuthRequired]
         public async Task<IActionResult> DeleteUser()
         {

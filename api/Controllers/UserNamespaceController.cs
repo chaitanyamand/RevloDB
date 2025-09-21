@@ -20,7 +20,6 @@ namespace RevloDB.Controllers
 
         [HttpGet("user/{userId}")]
         [AuthRequired]
-        [Read]
         public async Task<ActionResult<IEnumerable<UserNamespaceDto>>> GetUserNamespaces()
         {
             var userId = ControllerUtil.GetUserIdFromHTTPContext(HttpContext);

@@ -96,13 +96,13 @@ namespace RevloDB.Middleware
                 }
 
                 context.SetItem(APIConstants.NAMESPACE_ID, namespaceId);
-                await _next(context);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, $"Error during role verification for user {userId} in namespace {namespaceId}");
                 await WriteForbiddenAsync(context, "Role verification error.");
             }
+            await _next(context);
         }
 
         private static ApiKeyAuthContext ExtractApiKeyAuthContext(HttpContext context)

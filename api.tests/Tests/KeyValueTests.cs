@@ -21,8 +21,6 @@ namespace RevloDB.API.Tests
             _userUtility = new TestUserUtility(_client);
         }
 
-        #region Test Data Providers
-
         public static IEnumerable<object[]> GetWriteAccessUsers()
         {
             yield return new object[] { "editor" };
@@ -36,68 +34,48 @@ namespace RevloDB.API.Tests
             yield return new object[] { "admin" };
         }
 
-        #endregion
-
-        #region POST /api/v1/keyvalue
-
         [Theory]
         [MemberData(nameof(GetWriteAccessUsers))]
         public async Task CreateKey_WithWriteAccess_ShouldSucceed(string userRole)
         {
-            // ARRANGE
-            await _userUtility.InitializeAsync();
-            var user = GetUserByRole(userRole);
-            var createDto = new CreateKeyDto { KeyName = "new-key", Value = "initial-value" };
+            var user = await _userUtility.GetUserAsync(userRole);
+            var keyName = $"new-key-{Guid.NewGuid().ToString("N")[..8]}";
+            var createDto = new CreateKeyDto { KeyName = keyName, Value = "initial-value" };
 
-            // ACT
             var response = await CreateTestKeyAsync(user, createDto);
 
-            // ASSERT
             Assert.Equal(HttpStatusCode.Created, response.StatusCode);
             var createdKey = await response.Content.ReadFromJsonAsync<KeyDto>();
             Assert.NotNull(createdKey);
-            Assert.Equal("new-key", createdKey.KeyName);
+            Assert.Equal(keyName, createdKey.KeyName);
         }
 
         [Fact]
         public async Task CreateKey_WithReadonlyUser_ShouldBeForbidden()
         {
-            // ARRANGE
-            await _userUtility.InitializeAsync();
-            var user = _userUtility.GetReadonlyUsers().First();
-            var createDto = new CreateKeyDto { KeyName = "forbidden-key", Value = "some-value" };
+            var user = await _userUtility.GetReadonlyUserAsync();
+            var keyName = $"forbidden-key-{Guid.NewGuid().ToString("N")[..8]}";
+            var createDto = new CreateKeyDto { KeyName = keyName, Value = "some-value" };
 
-            // ACT
             _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", user.AccessToken);
-            // CHANGED: Added namespaceId query parameter
             var response = await _client.PostAsJsonAsync($"/api/v1/keyvalue?namespaceId={user.NamespaceId}", createDto);
 
-            // ASSERT
             Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
         }
-
-        #endregion
-
-        #region GET /api/v1/keyvalue/{keyName}
 
         [Theory]
         [MemberData(nameof(GetReadAccessUsers))]
         public async Task GetKey_WithReadAccess_ShouldReturnKey(string userRole)
         {
-            // ARRANGE
-            await _userUtility.InitializeAsync();
-            var admin = _userUtility.GetAdminUsers().First();
-            var keyName = "test-key-for-get";
+            var admin = await _userUtility.GetAdminUserAsync();
+            var keyName = $"test-key-for-get-{Guid.NewGuid().ToString("N")[..8]}";
             await CreateTestKeyAsync(admin, new CreateKeyDto { KeyName = keyName, Value = "test-value" });
 
-            var user = GetUserByRole(userRole);
+            var user = await _userUtility.GetUserAsync(userRole);
 
-            // ACT
             _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", user.AccessToken);
-            // CHANGED: Added namespaceId query parameter
             var response = await _client.GetAsync($"/api/v1/keyvalue/{keyName}?namespaceId={user.NamespaceId}");
 
-            // ASSERT
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             var keyDto = await response.Content.ReadFromJsonAsync<KeyDto>();
             Assert.NotNull(keyDto);
@@ -107,93 +85,59 @@ namespace RevloDB.API.Tests
         [Fact]
         public async Task GetKey_FromAnotherNamespace_ShouldReturnNotFound()
         {
-            // ARRANGE
-            await _userUtility.InitializeAsync();
-            var userA = _userUtility.GetNamespaceOwner();
-            var keyName = "user-a-secret-key";
+            var userA = await _userUtility.GetNamespaceOwnerAsync();
+            var keyName = $"user-a-secret-key-{Guid.NewGuid().ToString("N")[..8]}";
             await CreateTestKeyAsync(userA, new CreateKeyDto { KeyName = keyName, Value = "secret" });
 
             var userBUtility = new TestUserUtility(_client);
-            await userBUtility.InitializeAsync();
-            var userB = userBUtility.GetNamespaceOwner();
+            var userB = await userBUtility.GetNamespaceOwnerAsync();
 
-            // ACT
             _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", userB.AccessToken);
-            // CHANGED: Added namespaceId from the CALLER (User B)
             var response = await _client.GetAsync($"/api/v1/keyvalue/{keyName}?namespaceId={userB.NamespaceId}");
 
-            // ASSERT
             Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         }
-
-        #endregion
-
-        #region PUT /api/v1/keyvalue/{keyName}
 
         [Theory]
         [MemberData(nameof(GetWriteAccessUsers))]
         public async Task UpdateKey_WithWriteAccess_ShouldSucceed(string userRole)
         {
-            // ARRANGE
-            await _userUtility.InitializeAsync();
-            var admin = _userUtility.GetAdminUsers().First();
-            var keyName = "key-to-update";
+            var admin = await _userUtility.GetAdminUserAsync();
+            var keyName = $"key-to-update-{Guid.NewGuid().ToString("N")[..8]}";
             await CreateTestKeyAsync(admin, new CreateKeyDto { KeyName = keyName, Value = "version1" });
 
-            var user = GetUserByRole(userRole);
+            var user = await _userUtility.GetUserAsync(userRole);
             var updateDto = new UpdateKeyDto { Value = "version2" };
 
-            // ACT
             _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", user.AccessToken);
-            // CHANGED: Added namespaceId query parameter
             var response = await _client.PutAsJsonAsync($"/api/v1/keyvalue/{keyName}?namespaceId={user.NamespaceId}", updateDto);
 
-            // ASSERT
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         }
-
-        #endregion
-
-        #region History and Revert Workflow
 
         [Fact]
         public async Task FullWorkflow_CreateUpdateRevertHistory_ShouldWorkCorrectly()
         {
-            // ARRANGE
-            await _userUtility.InitializeAsync();
-            var admin = _userUtility.GetAdminUsers().First();
-            var keyName = "workflow-key";
-            var namespaceId = admin.NamespaceId; // Get namespaceId for all calls
+            var admin = await _userUtility.GetAdminUserAsync();
+            var keyName = $"workflow-key-{Guid.NewGuid().ToString("N")[..8]}";
+            var namespaceId = admin.NamespaceId;
             _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", admin.AccessToken);
 
-            // 1. CREATE
-            // CHANGED: Added namespaceId query parameter
             await _client.PostAsJsonAsync($"/api/v1/keyvalue?namespaceId={namespaceId}", new CreateKeyDto { KeyName = keyName, Value = "Value-V1" });
 
-            // 2. UPDATE
-            // CHANGED: Added namespaceId query parameter
             await _client.PutAsJsonAsync($"/api/v1/keyvalue/{keyName}?namespaceId={namespaceId}", new UpdateKeyDto { Value = "Value-V2" });
-
-            // 3. UPDATE AGAIN
-            // CHANGED: Added namespaceId query parameter
             await _client.PutAsJsonAsync($"/api/v1/keyvalue/{keyName}?namespaceId={namespaceId}", new UpdateKeyDto { Value = "Value-V3" });
 
-            // 4. GET HISTORY
-            // CHANGED: Added namespaceId query parameter
             var historyResponse = await _client.GetAsync($"/api/v1/keyvalue/{keyName}/history?namespaceId={namespaceId}");
             historyResponse.EnsureSuccessStatusCode();
             var versions = await historyResponse.Content.ReadFromJsonAsync<List<VersionDto>>();
             Assert.NotNull(versions);
             Assert.Equal(3, versions.Count);
 
-            // 5. REVERT
             var revertDto = new RevertKeyDto { KeyName = keyName, VersionNumber = 1 };
-            // CHANGED: Added namespaceId query parameter
             var revertResponse = await _client.PostAsJsonAsync($"/api/v1/keyvalue/revert?namespaceId={namespaceId}", revertDto);
             revertResponse.EnsureSuccessStatusCode();
 
-            // 6. VERIFY REVERT
-            // CHANGED: Added namespaceId query parameter
             var finalGetResponse = await _client.GetAsync($"/api/v1/keyvalue/{keyName}?namespaceId={namespaceId}");
             finalGetResponse.EnsureSuccessStatusCode();
             var finalKey = await finalGetResponse.Content.ReadFromJsonAsync<KeyDto>();
@@ -202,28 +146,10 @@ namespace RevloDB.API.Tests
             Assert.Equal(1, finalKey.CurrentVersionNumber);
         }
 
-        #endregion
-
-        #region Helper Methods
-
-        private AuthenticatedUser GetUserByRole(string role)
-        {
-            return role switch
-            {
-                "readonly" => _userUtility.GetReadonlyUsers().First(),
-                "editor" => _userUtility.GetEditorUsers().First(),
-                "admin" => _userUtility.GetAdminUsers().First(),
-                _ => throw new ArgumentOutOfRangeException(nameof(role), "Invalid role specified")
-            };
-        }
-
         private async Task<HttpResponseMessage> CreateTestKeyAsync(AuthenticatedUser user, CreateKeyDto dto)
         {
             _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", user.AccessToken);
-            // CHANGED: Added namespaceId query parameter to the helper
             return await _client.PostAsJsonAsync($"/api/v1/keyvalue?namespaceId={user.NamespaceId}", dto);
         }
-
-        #endregion
     }
 }

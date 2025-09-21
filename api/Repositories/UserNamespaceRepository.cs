@@ -130,7 +130,7 @@ namespace RevloDB.Repositories
 
                 if (userNamespace == null)
                 {
-                    throw new KeyNotFoundException($"User with ID '{userId}' does not have access to namespace with ID '{namespaceId}'");
+                    throw new UnauthorizedAccessException($"User with ID '{userId}' does not have access to namespace with ID '{namespaceId}'");
                 }
 
                 _context.UserNamespaces.Remove(userNamespace);
@@ -138,7 +138,7 @@ namespace RevloDB.Repositories
 
                 await transaction.CommitAsync();
             }
-            catch (KeyNotFoundException)
+            catch (UnauthorizedAccessException)
             {
                 await transaction.RollbackAsync();
                 throw;
