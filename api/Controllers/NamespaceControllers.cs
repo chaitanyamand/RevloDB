@@ -17,28 +17,29 @@ namespace RevloDB.Controllers
             _namespaceService = namespaceService;
         }
 
-        [HttpGet("{id}")]
+        [HttpGet]
         [AuthRequired]
         [Read]
-        public async Task<ActionResult<NamespaceDto>> GetNamespace(int id)
+        public async Task<ActionResult<NamespaceDto>> GetNamespace()
         {
-            if (id <= 0)
+            var namespaceId = ControllerUtil.GetNameSpaceIdFromHTTPContext(HttpContext);
+            if (namespaceId <= 0)
             {
                 return this.BadRequestProblem("Namespace ID must be a positive integer");
             }
 
-            var namespaceDto = await _namespaceService.GetNamespaceByIdAsync(id);
+            var namespaceDto = await _namespaceService.GetNamespaceByIdAsync(namespaceId);
             if (namespaceDto == null)
             {
-                return this.NotFoundProblem($"Namespace with id {id} not found");
+                return this.NotFoundProblem($"Namespace with id {namespaceId} not found");
             }
 
             return Ok(namespaceDto);
         }
 
         [HttpGet("by-name/{name}")]
+        [HttpGet("by-name/{**name}")]
         [AuthRequired]
-        [Read]
         public async Task<ActionResult<NamespaceDto>> GetNamespaceByName(string name)
         {
             if (string.IsNullOrWhiteSpace(name))
@@ -70,12 +71,11 @@ namespace RevloDB.Controllers
             return CreatedAtAction(nameof(GetNamespace), new { id = namespaceDto.Id }, namespaceDto);
         }
 
-        [HttpPut("{id}")]
         [AuthRequired]
-        [Write]
-        public async Task<ActionResult<NamespaceDto>> UpdateNamespace(int id, [FromBody] UpdateNamespaceDto updateNamespaceDto)
+        public async Task<ActionResult<NamespaceDto>> UpdateNamespace([FromBody] UpdateNamespaceDto updateNamespaceDto)
         {
-            if (id <= 0)
+            var namespaceId = ControllerUtil.GetNameSpaceIdFromHTTPContext(HttpContext);
+            if (namespaceId <= 0)
             {
                 return this.BadRequestProblem("Namespace ID must be a positive integer");
             }
@@ -85,7 +85,7 @@ namespace RevloDB.Controllers
                 return this.ModelValidationProblem(ModelState);
             }
 
-            var namespaceDto = await _namespaceService.UpdateNamespaceAsync(id, updateNamespaceDto);
+            var namespaceDto = await _namespaceService.UpdateNamespaceAsync(namespaceId, updateNamespaceDto);
             return Ok(namespaceDto);
         }
 

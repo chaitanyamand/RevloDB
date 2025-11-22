@@ -31,14 +31,16 @@ namespace RevloDB.Repositories
                 .FirstOrDefaultAsync(n => n.Name == namespaceName);
         }
 
-        public async Task<Namespace> CreateAsync(string namespaceName, int createdByUserId)
+        public async Task<Namespace> CreateAsync(string namespaceName, string? namespaceDescription, int createdByUserId)
         {
             await using var transaction = await _context.Database.BeginTransactionAsync();
+            namespaceDescription ??= string.Empty;
             try
             {
                 var ns = new Namespace
                 {
                     Name = namespaceName,
+                    Description = namespaceDescription,
                     CreatedAt = DateTime.UtcNow,
                     IsDeleted = false,
                     CreatedByUserId = createdByUserId

@@ -45,6 +45,7 @@ namespace RevloDB.Services
         {
             var namespaceEntity = await _namespaceRepository.CreateAsync(
                 createNamespaceDto.Name,
+                createNamespaceDto.Description,
                 createdByUserId
             );
 

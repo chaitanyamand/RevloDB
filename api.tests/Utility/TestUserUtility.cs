@@ -9,8 +9,11 @@ namespace RevloDB.API.Tests.Utilities
     {
         private readonly HttpClient _client;
         private readonly Dictionary<string, AuthenticatedUser> _userCache = new();
-        private AuthenticatedUser? _namespaceOwner;
-        private int? _namespaceId;
+
+        private static AuthenticatedUser? _namespaceOwner;
+        private static int? _namespaceId;
+        private static readonly object _lock = new object();
+
         private const string NamespaceName = "Test-Namespace";
 
         public TestUserUtility(HttpClient client)
@@ -28,8 +31,19 @@ namespace RevloDB.API.Tests.Utilities
 
             if (role == "owner")
             {
-                _namespaceOwner = user;
-                _namespaceId = await CreateNamespaceAsync(user, NamespaceName);
+                lock (_lock)
+                {
+                    if (_namespaceOwner == null)
+                    {
+                        _namespaceOwner = user;
+                    }
+                }
+
+                if (_namespaceId == null)
+                {
+                    _namespaceId = await CreateNamespaceAsync(user, NamespaceName);
+                }
+
                 user.NamespaceId = _namespaceId.Value;
                 user.NamespaceName = NamespaceName;
             }
