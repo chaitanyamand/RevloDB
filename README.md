@@ -9,7 +9,7 @@ A key-value datastore with built-in version control.
 
 ---
 
-## 📖 About the Project
+## About the Project
 
 RevloDB is a datastore designed for applications that require a complete history of their data. It provides a straightforward key-value interface, but with a powerful difference: **every change is preserved**.
 
@@ -17,7 +17,7 @@ This allows you to easily track, audit, and revert your data to any previous sta
 
 ---
 
-## ✨ Project Goals
+## Project Goals
 
 As this project is in the early stages of development, this section outlines the core goals.
 
@@ -27,31 +27,31 @@ As this project is in the early stages of development, this section outlines the
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 Installation instructions will be provided once the first stable release is available.
 
 ---
 
-## 💻 Usage
+## Usage
 
 Detailed API documentation and usage examples will be added here as the project develops.
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 We welcome contributions! If you'd like to help improve RevloDB, please follow the standard fork and pull request workflow. For more detailed instructions, see the `CONTRIBUTING.md` file.
 
 ---
 
-## 📜 License
+## License
 
 This project is distributed under the MIT License. See `LICENSE.txt` for more information.
 
 ---
 
-## 📧 Contact
+## Contact
 
 Chaitanya Mandale - <chaitanyam187@gmail.com>
 
