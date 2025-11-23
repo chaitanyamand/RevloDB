@@ -37,7 +37,6 @@ namespace RevloDB.Controllers
             return Ok(namespaceDto);
         }
 
-        [HttpGet("by-name/{name}")]
         [HttpGet("by-name/{**name}")]
         [AuthRequired]
         public async Task<ActionResult<NamespaceDto>> GetNamespaceByName(string name)
@@ -71,7 +70,9 @@ namespace RevloDB.Controllers
             return CreatedAtAction(nameof(GetNamespace), new { id = namespaceDto.Id }, namespaceDto);
         }
 
+        [HttpPut]
         [AuthRequired]
+        [Write]
         public async Task<ActionResult<NamespaceDto>> UpdateNamespace([FromBody] UpdateNamespaceDto updateNamespaceDto)
         {
             var namespaceId = ControllerUtil.GetNameSpaceIdFromHTTPContext(HttpContext);
@@ -89,17 +90,18 @@ namespace RevloDB.Controllers
             return Ok(namespaceDto);
         }
 
-        [HttpDelete("{id}")]
+        [HttpDelete]
         [AuthRequired]
         [Write]
-        public async Task<IActionResult> DeleteNamespace(int id)
+        public async Task<IActionResult> DeleteNamespace()
         {
-            if (id <= 0)
+            var namespaceId = ControllerUtil.GetNameSpaceIdFromHTTPContext(HttpContext);
+            if (namespaceId <= 0)
             {
                 return this.BadRequestProblem("Namespace ID must be a positive integer");
             }
 
-            await _namespaceService.DeleteNamespaceAsync(id);
+            await _namespaceService.DeleteNamespaceAsync(namespaceId);
             return NoContent();
         }
     }

@@ -7,7 +7,7 @@ namespace RevloDB.Repositories.Interfaces
         Task<Namespace?> GetByIdAsync(int id);
         Task<Namespace?> GetByNameAsync(string namespaceName);
         Task<Namespace> CreateAsync(string namespaceName, string? namespaceDescription, int createdByUserId);
-        Task<Namespace> UpdateNameAsync(string newName, int id);
+        Task<Namespace> UpdateNamespaceAsync(string newName, string? newDescription, int id);
         Task DeleteAsync(int id);
     }
 }

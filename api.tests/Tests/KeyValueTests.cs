@@ -95,7 +95,7 @@ namespace RevloDB.API.Tests
             _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", userB.AccessToken);
             var response = await _client.GetAsync($"/api/v1/keyvalue/{keyName}?namespaceId={userB.NamespaceId}");
 
-            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
         }
 
         [Theory]

@@ -60,7 +60,7 @@ namespace RevloDB.Services
 
         public async Task<NamespaceDto> UpdateNamespaceAsync(int id, UpdateNamespaceDto updateNamespaceDto)
         {
-            var updatedNamespace = await _namespaceRepository.UpdateNameAsync(updateNamespaceDto.Name, id);
+            var updatedNamespace = await _namespaceRepository.UpdateNamespaceAsync(updateNamespaceDto.Name, updateNamespaceDto.Description, id);
             if (updatedNamespace == null)
             {
                 throw new InvalidOperationException($"Namespace with id {id} not found after update");

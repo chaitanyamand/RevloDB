@@ -150,7 +150,7 @@ namespace RevloDB.API.Tests
             _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", user.AccessToken);
             var response = await _client.GetAsync("/api/v1/namespace?namespaceId=0");
 
-            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
         }
 
         [Fact]
@@ -161,7 +161,7 @@ namespace RevloDB.API.Tests
             _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", user.AccessToken);
             var response = await _client.GetAsync("/api/v1/namespace?namespaceId=-1");
 
-            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
         }
 
         [Fact]
@@ -172,7 +172,7 @@ namespace RevloDB.API.Tests
             _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", user.AccessToken);
             var response = await _client.GetAsync("/api/v1/namespace?namespaceId=99999");
 
-            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
         }
 
         #endregion
@@ -241,9 +241,9 @@ namespace RevloDB.API.Tests
         public async Task UpdateNamespace_WithWriteAccess_ShouldSucceed(string userRole)
         {
             var admin = await _userUtility.GetAdminUserAsync();
-            var namespaceToUpdate = await CreateTestNamespaceAsync(admin);
-
             var user = await _userUtility.GetUserAsync(userRole);
+            var namespaceToUpdate = await CreateTestNamespaceWithUserAccessAsync(admin, userRole, user);
+
             var updateDto = new UpdateNamespaceDto
             {
                 Name = $"updated-{namespaceToUpdate.Name}",
@@ -264,9 +264,9 @@ namespace RevloDB.API.Tests
         public async Task UpdateNamespace_WithReadonlyUser_ShouldBeForbidden()
         {
             var admin = await _userUtility.GetAdminUserAsync();
-            var namespaceToUpdate = await CreateTestNamespaceAsync(admin);
-
             var readonlyUser = await _userUtility.GetReadonlyUserAsync();
+            var namespaceToUpdate = await CreateTestNamespaceWithUserAccessAsync(admin, "readonly", readonlyUser);
+
             var updateDto = new UpdateNamespaceDto
             {
                 Name = "forbidden-update",
@@ -302,7 +302,7 @@ namespace RevloDB.API.Tests
             _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", user.AccessToken);
             var response = await _client.PutAsJsonAsync("/api/v1/namespace/?namespaceId=0", updateDto);
 
-            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
         }
 
         [Fact]
@@ -327,12 +327,11 @@ namespace RevloDB.API.Tests
         public async Task DeleteNamespace_WithWriteAccess_ShouldSucceed(string userRole)
         {
             var admin = await _userUtility.GetAdminUserAsync();
-            var namespaceToDelete = await CreateTestNamespaceAsync(admin);
-
             var user = await _userUtility.GetUserAsync(userRole);
+            var namespaceToDelete = await CreateTestNamespaceWithUserAccessAsync(admin, userRole, user);
 
             _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", user.AccessToken);
-            var response = await _client.DeleteAsync($"/api/v1/namespace/{namespaceToDelete.Id}");
+            var response = await _client.DeleteAsync($"/api/v1/namespace/?namespaceId={namespaceToDelete.Id}");
 
             Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
         }
@@ -341,12 +340,11 @@ namespace RevloDB.API.Tests
         public async Task DeleteNamespace_WithReadonlyUser_ShouldBeForbidden()
         {
             var admin = await _userUtility.GetAdminUserAsync();
-            var namespaceToDelete = await CreateTestNamespaceAsync(admin);
-
             var readonlyUser = await _userUtility.GetReadonlyUserAsync();
+            var namespaceToDelete = await CreateTestNamespaceWithUserAccessAsync(admin, "readonly", readonlyUser);
 
             _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", readonlyUser.AccessToken);
-            var response = await _client.DeleteAsync($"/api/v1/namespace/{namespaceToDelete.Id}");
+            var response = await _client.DeleteAsync($"/api/v1/namespace/?namespaceId={namespaceToDelete.Id}");
 
             Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
         }
@@ -354,7 +352,7 @@ namespace RevloDB.API.Tests
         [Fact]
         public async Task DeleteNamespace_WithoutAuthentication_ShouldReturnUnauthorized()
         {
-            var response = await _client.DeleteAsync("/api/v1/namespace/1");
+            var response = await _client.DeleteAsync("/api/v1/namespace/?namespaceId=1");
 
             Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
         }
@@ -365,9 +363,9 @@ namespace RevloDB.API.Tests
             var user = await _userUtility.GetAdminUserAsync();
 
             _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", user.AccessToken);
-            var response = await _client.DeleteAsync("/api/v1/namespace/0");
+            var response = await _client.DeleteAsync("/api/v1/namespace/?namespaceId=0");
 
-            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
         }
 
         [Fact]
@@ -376,9 +374,9 @@ namespace RevloDB.API.Tests
             var user = await _userUtility.GetAdminUserAsync();
 
             _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", user.AccessToken);
-            var response = await _client.DeleteAsync("/api/v1/namespace/-1");
+            var response = await _client.DeleteAsync("/api/v1/namespace/?namespaceId=-1");
 
-            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
         }
 
         #endregion
@@ -423,7 +421,7 @@ namespace RevloDB.API.Tests
                 Name = $"updated-{namespaceName}",
                 Description = "Updated description"
             };
-            var updateResponse = await _client.PutAsJsonAsync($"/api/v1/namespace/{createdNamespace.Id}", updateDto);
+            var updateResponse = await _client.PutAsJsonAsync($"/api/v1/namespace/?namespaceId={createdNamespace.Id}", updateDto);
             updateResponse.EnsureSuccessStatusCode();
             var updatedNamespace = await updateResponse.Content.ReadFromJsonAsync<NamespaceDto>();
             Assert.NotNull(updatedNamespace);
@@ -431,7 +429,7 @@ namespace RevloDB.API.Tests
             Assert.Equal(updateDto.Description, updatedNamespace.Description);
 
             // Delete
-            var deleteResponse = await _client.DeleteAsync($"/api/v1/namespace/{createdNamespace.Id}");
+            var deleteResponse = await _client.DeleteAsync($"/api/v1/namespace/?namespaceId={createdNamespace.Id}");
             deleteResponse.EnsureSuccessStatusCode();
 
             // Verify deletion
@@ -459,6 +457,27 @@ namespace RevloDB.API.Tests
             _client.DefaultRequestHeaders.Authorization = null;
 
             return createdNamespace!;
+        }
+
+        private async Task<NamespaceDto> CreateTestNamespaceWithUserAccessAsync(AuthenticatedUser admin, string userRole, AuthenticatedUser targetUser)
+        {
+            // Create the namespace
+            var testNamespace = await CreateTestNamespaceAsync(admin);
+
+            // Grant access to the target user for this specific namespace
+            var grantAccessDto = new GrantAccessDto
+            {
+                UserId = targetUser.Id,
+                NamespaceId = testNamespace.Id,
+                Role = userRole
+            };
+
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", admin.AccessToken);
+            var grantResponse = await _client.PostAsJsonAsync("/api/v1/user-namespaces/grant-access", grantAccessDto);
+            grantResponse.EnsureSuccessStatusCode();
+            _client.DefaultRequestHeaders.Authorization = null;
+
+            return testNamespace;
         }
 
         #endregion

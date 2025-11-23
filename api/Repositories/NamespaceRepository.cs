@@ -76,7 +76,7 @@ namespace RevloDB.Repositories
             }
         }
 
-        public async Task<Namespace> UpdateNameAsync(string newName, int id)
+        public async Task<Namespace> UpdateNamespaceAsync(string newName, string? newDescription, int id)
         {
             await using var transaction = await _context.Database.BeginTransactionAsync();
             try
@@ -91,6 +91,7 @@ namespace RevloDB.Repositories
                 }
 
                 ns.Name = newName;
+                ns.Description = string.IsNullOrWhiteSpace(newDescription) ? ns.Description : newDescription;
                 await _context.SaveChangesAsync();
 
                 await transaction.CommitAsync();
