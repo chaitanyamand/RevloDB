@@ -165,7 +165,7 @@ namespace RevloDB.API.Tests
         }
 
         [Fact]
-        public async Task GetNamespace_WithNonExistentNamespaceId_ShouldReturnNotFound()
+        public async Task GetNamespace_WithNonExistentNamespaceId_ShouldReturnForbidden()
         {
             var user = await _userUtility.GetNamespaceOwnerAsync();
 
