@@ -34,16 +34,6 @@ namespace RevloDB.Services
         {
             var namespaceEntity = await _namespaceRepository.GetByNameAsync(name, userId);
             if (namespaceEntity == null) return null;
-            var userRoleInNamespace = await _userNamespaceRepository.UserHasAccessToNamespaceAsync(userId, namespaceEntity.Id);
-            if (userRoleInNamespace == null)
-            {
-                return null;
-            }
-            var userHasReadAccess = RoleCheckUtil.HasSufficientRole(userRoleInNamespace.Value, Entities.NamespaceRole.ReadOnly);
-            if (!userHasReadAccess)
-            {
-                return null;
-            }
             return new NamespaceDto
             {
                 Id = namespaceEntity.Id,

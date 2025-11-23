@@ -93,7 +93,7 @@ namespace RevloDB.Repositories
                 }
 
                 ns.Name = newName;
-                ns.Description = string.IsNullOrWhiteSpace(newDescription) ? ns.Description : newDescription;
+                ns.Description = newDescription == null ? ns.Description : newDescription;
                 await _context.SaveChangesAsync();
 
                 await transaction.CommitAsync();
