@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using RevloDB.API.Tests.DTOs;
@@ -8,11 +9,12 @@ namespace RevloDB.API.Tests.Utilities
     public class TestUserUtility
     {
         private readonly HttpClient _client;
-        private readonly Dictionary<string, AuthenticatedUser> _userCache = new();
+        private readonly ConcurrentDictionary<string, AuthenticatedUser> _userCache = new();
+        private readonly SemaphoreSlim _namespaceSemaphore = new SemaphoreSlim(1, 1);
 
         private static AuthenticatedUser? _namespaceOwner;
         private static int? _namespaceId;
-        private static readonly object _lock = new object();
+        private static readonly object _namespaceLock = new object();
 
         private const string NamespaceName = "Test-Namespace";
 
@@ -31,32 +33,45 @@ namespace RevloDB.API.Tests.Utilities
 
             if (role == "owner")
             {
-                lock (_lock)
+                await _namespaceSemaphore.WaitAsync();
+                try
                 {
                     if (_namespaceOwner == null)
                     {
                         _namespaceOwner = user;
                     }
-                }
 
-                if (_namespaceId == null)
+                    if (_namespaceId == null)
+                    {
+                        _namespaceId = await CreateNamespaceAsync(_namespaceOwner, NamespaceName);
+                    }
+
+                    user.NamespaceId = _namespaceId.Value;
+                    user.NamespaceName = NamespaceName;
+                }
+                finally
                 {
-                    _namespaceId = await CreateNamespaceAsync(user, NamespaceName);
+                    _namespaceSemaphore.Release();
                 }
-
-                user.NamespaceId = _namespaceId.Value;
-                user.NamespaceName = NamespaceName;
             }
             else
             {
                 await EnsureNamespaceOwnerAsync();
-                await GrantAccessAsync(_namespaceOwner!, user.Id, _namespaceId!.Value, role);
-                user.NamespaceId = _namespaceId!.Value;
-                user.NamespaceName = NamespaceName;
+
+                await _namespaceSemaphore.WaitAsync();
+                try
+                {
+                    await GrantAccessAsync(_namespaceOwner!, user.Id, _namespaceId!.Value, role);
+                    user.NamespaceId = _namespaceId!.Value;
+                    user.NamespaceName = NamespaceName;
+                }
+                finally
+                {
+                    _namespaceSemaphore.Release();
+                }
             }
 
-            _userCache[role] = user;
-            return user;
+            return _userCache.AddOrUpdate(role, user, (key, existing) => existing);
         }
 
         public async Task<AuthenticatedUser> GetNamespaceOwnerAsync()
@@ -82,7 +97,23 @@ namespace RevloDB.API.Tests.Utilities
         private async Task EnsureNamespaceOwnerAsync()
         {
             if (_namespaceOwner == null)
-                await GetUserAsync("owner");
+            {
+                await _namespaceSemaphore.WaitAsync();
+                try
+                {
+                    if (_namespaceOwner == null)
+                    {
+                        var owner = await CreateAndLoginUserAsync("owner");
+                        owner.RoleInNamespace = "admin";
+                        _namespaceOwner = owner;
+                        _namespaceId = await CreateNamespaceAsync(owner, NamespaceName);
+                    }
+                }
+                finally
+                {
+                    _namespaceSemaphore.Release();
+                }
+            }
         }
 
         private async Task<AuthenticatedUser> CreateAndLoginUserAsync(string rolePrefix)
