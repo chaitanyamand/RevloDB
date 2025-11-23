@@ -1,16 +1,19 @@
 using RevloDB.DTOs;
 using RevloDB.Repositories.Interfaces;
 using RevloDB.Services.Interfaces;
+using RevloDB.Utility;
 
 namespace RevloDB.Services
 {
     public class NamespaceService : INamespaceService
     {
         private readonly INamespaceRepository _namespaceRepository;
+        private readonly IUserNamespaceRepository _userNamespaceRepository;
 
-        public NamespaceService(INamespaceRepository namespaceRepository)
+        public NamespaceService(INamespaceRepository namespaceRepository, IUserNamespaceRepository userNamespaceRepository)
         {
             _namespaceRepository = namespaceRepository;
+            _userNamespaceRepository = userNamespaceRepository;
         }
 
         public async Task<NamespaceDto?> GetNamespaceByIdAsync(int id)
@@ -27,11 +30,20 @@ namespace RevloDB.Services
             };
         }
 
-        public async Task<NamespaceDto?> GetNamespaceByNameAsync(string name)
+        public async Task<NamespaceDto?> GetNamespaceByNameAsync(string name, int userId)
         {
             var namespaceEntity = await _namespaceRepository.GetByNameAsync(name);
             if (namespaceEntity == null) return null;
-
+            var userRoleInNamespace = await _userNamespaceRepository.UserHasAccessToNamespaceAsync(userId, namespaceEntity.Id);
+            if (userRoleInNamespace == null)
+            {
+                return null;
+            }
+            var userHasReadAccess = RoleCheckUtil.HasSufficientRole(userRoleInNamespace.Value, Entities.NamespaceRole.ReadOnly);
+            if (!userHasReadAccess)
+            {
+                return null;
+            }
             return new NamespaceDto
             {
                 Id = namespaceEntity.Id,

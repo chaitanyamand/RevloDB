@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using Microsoft.AspNetCore.Http.HttpResults;
 using RevloDB.Entities;
 using RevloDB.Extensions;
 using RevloDB.Repositories.Interfaces;
@@ -39,6 +40,10 @@ namespace RevloDB.Services
                 ? DateTime.UtcNow.AddDays(createApiKeyDto.ExpiresAtInDays.Value)
                 : DateTime.UtcNow.AddDays(14);
             var apiKeyDescription = createApiKeyDto.Description;
+            if (namespaceId <= 0)
+            {
+                throw new BadHttpRequestException("Invalid NamespaceId");
+            }
 
             var userNamespaceEntry = await _userNamespaceRepository.GetUserNamespaceEntryAsync(userId, namespaceId);
 

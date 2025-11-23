@@ -45,8 +45,8 @@ namespace RevloDB.Controllers
             {
                 return this.BadRequestProblem("Namespace name cannot be empty");
             }
-
-            var namespaceDto = await _namespaceService.GetNamespaceByNameAsync(name);
+            var userId = ControllerUtil.GetUserIdFromHTTPContext(HttpContext);
+            var namespaceDto = await _namespaceService.GetNamespaceByNameAsync(name, userId);
             if (namespaceDto == null)
             {
                 return this.NotFoundProblem($"Namespace '{name}' not found");
