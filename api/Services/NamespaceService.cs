@@ -32,7 +32,7 @@ namespace RevloDB.Services
 
         public async Task<NamespaceDto?> GetNamespaceByNameAsync(string name, int userId)
         {
-            var namespaceEntity = await _namespaceRepository.GetByNameAsync(name);
+            var namespaceEntity = await _namespaceRepository.GetByNameAsync(name, userId);
             if (namespaceEntity == null) return null;
             var userRoleInNamespace = await _userNamespaceRepository.UserHasAccessToNamespaceAsync(userId, namespaceEntity.Id);
             if (userRoleInNamespace == null)

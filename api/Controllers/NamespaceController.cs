@@ -67,7 +67,7 @@ namespace RevloDB.Controllers
             var userId = ControllerUtil.GetUserIdFromHTTPContext(HttpContext);
             var namespaceDto = await _namespaceService.CreateNamespaceAsync(createNamespaceDto, userId);
 
-            return CreatedAtAction(nameof(GetNamespace), new { id = namespaceDto.Id }, namespaceDto);
+            return CreatedAtAction(nameof(GetNamespace), new { namespaceId = namespaceDto.Id }, namespaceDto);
         }
 
         [HttpPut]

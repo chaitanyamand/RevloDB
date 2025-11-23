@@ -23,12 +23,14 @@ namespace RevloDB.Repositories
                 .FirstOrDefaultAsync(n => n.Id == id);
         }
 
-        public async Task<Namespace?> GetByNameAsync(string namespaceName)
+        public async Task<Namespace?> GetByNameAsync(string namespaceName, int userId)
         {
             return await _context.Namespaces
                 .AsNoTracking()
                 .Where(n => !n.IsDeleted)
-                .FirstOrDefaultAsync(n => n.Name == namespaceName);
+                .Where(n => n.Name == namespaceName)
+                .Where(n => n.UserNamespaces.Any(un => un.UserId == userId))
+                .FirstOrDefaultAsync();
         }
 
         public async Task<Namespace> CreateAsync(string namespaceName, string? namespaceDescription, int createdByUserId)
