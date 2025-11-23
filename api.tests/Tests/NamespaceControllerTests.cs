@@ -150,7 +150,7 @@ namespace RevloDB.API.Tests
             _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", user.AccessToken);
             var response = await _client.GetAsync("/api/v1/namespace?namespaceId=0");
 
-            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         }
 
         [Fact]
@@ -161,7 +161,7 @@ namespace RevloDB.API.Tests
             _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", user.AccessToken);
             var response = await _client.GetAsync("/api/v1/namespace?namespaceId=-1");
 
-            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         }
 
         [Fact]
@@ -302,7 +302,7 @@ namespace RevloDB.API.Tests
             _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", user.AccessToken);
             var response = await _client.PutAsJsonAsync("/api/v1/namespace/?namespaceId=0", updateDto);
 
-            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         }
 
         [Fact]
@@ -365,7 +365,7 @@ namespace RevloDB.API.Tests
             _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", user.AccessToken);
             var response = await _client.DeleteAsync("/api/v1/namespace/?namespaceId=0");
 
-            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         }
 
         [Fact]
@@ -376,7 +376,7 @@ namespace RevloDB.API.Tests
             _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", user.AccessToken);
             var response = await _client.DeleteAsync("/api/v1/namespace/?namespaceId=-1");
 
-            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         }
 
         #endregion

@@ -85,9 +85,15 @@ namespace RevloDB.Middleware
                 return;
             }
 
+            if (!int.TryParse(namespaceId, out var parsedNamespaceId) || parsedNamespaceId <= 0)
+            {
+                await WriteBadRequestAsync(context, "Invalid namespace ID. Must be a positive integer.");
+                return;
+            }
+
             try
             {
-                var hasRequiredRole = await CheckUserRoleAsync(userId, namespaceId, roleAttribute.RequiredRole);
+                var hasRequiredRole = await CheckUserRoleAsync(userId, parsedNamespaceId, roleAttribute.RequiredRole);
                 if (!hasRequiredRole)
                 {
                     _logger.LogWarning($"User {userId} denied access to namespace {namespaceId}. Required role: {roleAttribute.RequiredRole}");
@@ -126,9 +132,9 @@ namespace RevloDB.Middleware
             return RoleCheckUtil.HasSufficientRole(roleEnum.Value, requiredRole);
         }
 
-        private async Task<bool> CheckUserRoleAsync(string userId, string namespaceId, NamespaceRole requiredRole)
+        private async Task<bool> CheckUserRoleAsync(string userId, int parsedNamespaceId, NamespaceRole requiredRole)
         {
-            if (!int.TryParse(userId, out var parsedUserId) || !int.TryParse(namespaceId, out var parsedNamespaceId))
+            if (!int.TryParse(userId, out var parsedUserId))
                 return false;
 
             using var scope = _serviceProvider.CreateScope();
@@ -206,6 +212,30 @@ namespace RevloDB.Middleware
             {
                 Status = (int)HttpStatusCode.Forbidden,
                 Title = "Forbidden",
+                Detail = detail,
+                Instance = context.Request.Path
+            };
+
+            var json = JsonSerializer.Serialize(problem, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            });
+
+            await context.Response.WriteAsync(json);
+        }
+
+        private static async Task WriteBadRequestAsync(HttpContext context, string detail)
+        {
+            if (context.Response.HasStarted)
+                return;
+
+            context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+            context.Response.ContentType = "application/json";
+
+            var problem = new ProblemDetails
+            {
+                Status = (int)HttpStatusCode.BadRequest,
+                Title = "Bad Request",
                 Detail = detail,
                 Instance = context.Request.Path
             };

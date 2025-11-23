@@ -83,7 +83,7 @@ namespace RevloDB.API.Tests
         }
 
         [Fact]
-        public async Task GetKey_FromAnotherNamespace_ShouldReturnNotFound()
+        public async Task GetKey_FromAnotherNamespace_ShouldReturnForbidden()
         {
             var userA = await _userUtility.GetNamespaceOwnerAsync();
             var keyName = $"user-a-secret-key-{Guid.NewGuid().ToString("N")[..8]}";
