@@ -19,7 +19,6 @@ namespace RevloDB.Controllers
 
         [HttpPost("api-key")]
         [AuthRequired]
-        [Write]
         public async Task<ActionResult<ApiKeyDto>> CreateApiKey([FromBody] CreateApiKeyDto createApiKeyDto)
         {
             if (!ModelState.IsValid)

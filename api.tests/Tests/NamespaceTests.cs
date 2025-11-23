@@ -5,7 +5,6 @@ using RevloDB.API.Tests.Utilities;
 using RevloDB.DTOs;
 using RevloDB.API.Tests.Setup;
 using RevloDB.API.Tests.DTOs;
-using Xunit.Abstractions;
 
 namespace RevloDB.API.Tests
 {
@@ -14,13 +13,10 @@ namespace RevloDB.API.Tests
         private readonly HttpClient _client;
         private readonly TestUserUtility _userUtility;
         private readonly ApiTestAppFactory _factory;
-        private ITestOutputHelper _output;
-
-        public NamespaceControllerTests(ApiTestAppFactory factory, ITestOutputHelper output)
+        public NamespaceControllerTests(ApiTestAppFactory factory)
         {
             _factory = factory;
             _client = factory.CreateClient();
-            _output = output;
             _userUtility = new TestUserUtility(_client);
         }
 
@@ -185,15 +181,10 @@ namespace RevloDB.API.Tests
         {
             var user = await _userUtility.GetUserAsync(userRole);
 
-            _output.WriteLine($"User Role: {userRole}");  // <-- Use it
-            _output.WriteLine($"Namespace: {user.NamespaceName}");
-            _output.WriteLine($"Namespace ID: {user.NamespaceId}");
-
             _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", user.AccessToken);
             var response = await _client.GetAsync($"/api/v1/namespace/by-name/{user.NamespaceName}");
 
             var responseBody = await response.Content.ReadAsStringAsync();
-            _output.WriteLine($"Response: {responseBody}");  // <-- Use it
 
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             var namespaceDto = await response.Content.ReadFromJsonAsync<NamespaceDto>();
