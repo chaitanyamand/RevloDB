@@ -17,6 +17,13 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
+      actions: none
+      checks: none
+      id-token: none
+      issues: none
+      packages: none
+      statuses: none
+      security-events: none
 
     steps:
       - name: Check Commenter Permission
