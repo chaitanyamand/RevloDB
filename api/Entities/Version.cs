@@ -5,7 +5,6 @@ namespace RevloDB.Entities
 {
     public class Version
     {
-        [Key]
         public int Id { get; set; }
         [Required]
         public string Value { get; set; } = string.Empty;
@@ -15,7 +14,6 @@ namespace RevloDB.Entities
         public int VersionNumber { get; set; }
         [Required]
         public int KeyId { get; set; }
-        [ForeignKey("KeyId")]
         public Key Key { get; set; } = null!;
     }
 }

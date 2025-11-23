@@ -27,6 +27,31 @@ namespace RevloDB.Extensions
             });
         }
 
+        public static ObjectResult ForbiddenProblem(this ControllerBase controller, string detail)
+        {
+            return new ObjectResult(new ProblemDetails
+            {
+                Status = 403,
+                Title = "Forbidden",
+                Detail = detail,
+                Instance = controller.HttpContext.Request.Path
+            })
+            {
+                StatusCode = 403
+            };
+        }
+
+        public static UnauthorizedObjectResult UnauthorizedProblem(this ControllerBase controller, string detail)
+        {
+            return controller.Unauthorized(new ProblemDetails
+            {
+                Status = 401,
+                Title = "Unauthorized",
+                Detail = detail,
+                Instance = controller.HttpContext.Request.Path
+            });
+        }
+
         public static BadRequestObjectResult ModelValidationProblem(this ControllerBase controller, ModelStateDictionary modelState)
         {
             var errors = modelState

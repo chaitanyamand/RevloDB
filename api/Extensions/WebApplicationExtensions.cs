@@ -1,3 +1,4 @@
+using RevloDB.Middleware;
 using RevloDB.Services;
 
 namespace RevloDB.Extensions
@@ -14,6 +15,10 @@ namespace RevloDB.Extensions
 
         public static WebApplication ConfigureRevloDbPipeline(this WebApplication app)
         {
+            app.UseMiddleware<GlobalExceptionMiddleware>();
+            app.UseMiddleware<JwtAuthMiddleware>();
+            app.UseMiddleware<RoleAuthMiddleware>();
+
             if (app.Environment.IsDevelopment())
             {
                 app.UseSwagger();

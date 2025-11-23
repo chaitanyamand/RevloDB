@@ -15,9 +15,9 @@ namespace RevloDB.Services
             _versionRepository = versionRepository;
         }
 
-        public async Task<KeyDto?> GetKeyAsync(string keyName)
+        public async Task<KeyDto?> GetKeyAsync(string keyName, int namespaceId)
         {
-            var key = await _keyRepository.GetByNameAsync(keyName);
+            var key = await _keyRepository.GetByNameAsync(keyName, namespaceId);
             if (key == null) return null;
 
             return new KeyDto
@@ -30,15 +30,15 @@ namespace RevloDB.Services
             };
         }
 
-        public async Task<string?> GetValueAsync(string keyName)
+        public async Task<string?> GetValueAsync(string keyName, int namespaceId)
         {
-            var key = await _keyRepository.GetByNameAsync(keyName);
+            var key = await _keyRepository.GetByNameAsync(keyName, namespaceId);
             return key?.CurrentVersion?.Value;
         }
 
-        public async Task<IEnumerable<KeyDto>> GetAllKeysAsync()
+        public async Task<IEnumerable<KeyDto>> GetAllKeysAsync(int namespaceId)
         {
-            var keys = await _keyRepository.GetAllAsync();
+            var keys = await _keyRepository.GetAllAsync(namespaceId);
             return keys.Select(k => new KeyDto
             {
                 Id = k.Id,
@@ -49,11 +49,12 @@ namespace RevloDB.Services
             });
         }
 
-        public async Task<KeyDto> CreateKeyAsync(CreateKeyDto createKeyDto)
+        public async Task<KeyDto> CreateKeyAsync(CreateKeyDto createKeyDto, int namespaceId)
         {
             var key = await _keyRepository.CreateKeyWithVersionAsync(
                 createKeyDto.KeyName,
-                createKeyDto.Value
+                createKeyDto.Value,
+                namespaceId
             );
 
             return new KeyDto
@@ -66,9 +67,9 @@ namespace RevloDB.Services
             };
         }
 
-        public async Task<KeyDto> UpdateKeyAsync(string keyName, UpdateKeyDto updateKeyDto)
+        public async Task<KeyDto> UpdateKeyAsync(string keyName, UpdateKeyDto updateKeyDto, int namespaceId)
         {
-            var updatedKey = await _keyRepository.AddNewVersionAsync(keyName, updateKeyDto.Value);
+            var updatedKey = await _keyRepository.AddNewVersionAsync(keyName, updateKeyDto.Value, namespaceId);
 
             return new KeyDto
             {
@@ -80,27 +81,27 @@ namespace RevloDB.Services
             };
         }
 
-        public async Task DeleteKeyAsync(string keyName)
+        public async Task DeleteKeyAsync(string keyName, int namespaceId)
         {
-            var deleted = await _keyRepository.DeleteByNameAsync(keyName);
+            var deleted = await _keyRepository.DeleteByNameAsync(keyName, namespaceId);
             if (!deleted)
             {
                 throw new KeyNotFoundException($"Key '{keyName}' not found");
             }
         }
 
-        public async Task RestoreKeyAsync(string keyName)
+        public async Task RestoreKeyAsync(string keyName, int namespaceId)
         {
-            var restored = await _keyRepository.RestoreByNameAsync(keyName);
+            var restored = await _keyRepository.RestoreByNameAsync(keyName, namespaceId);
             if (!restored)
             {
                 throw new KeyNotFoundException($"Key '{keyName}' not found or is not deleted");
             }
         }
 
-        public async Task<IEnumerable<VersionDto>> GetKeyHistoryAsync(string keyName)
+        public async Task<IEnumerable<VersionDto>> GetKeyHistoryAsync(string keyName, int namespaceId)
         {
-            var key = await _keyRepository.GetByNameAsync(keyName);
+            var key = await _keyRepository.GetByNameAsync(keyName, namespaceId);
             if (key == null)
             {
                 throw new KeyNotFoundException($"Key '{keyName}' not found");
@@ -117,9 +118,9 @@ namespace RevloDB.Services
             });
         }
 
-        public async Task<string?> GetValueAtVersionAsync(string keyName, int versionNumber)
+        public async Task<string?> GetValueAtVersionAsync(string keyName, int versionNumber, int namespaceId)
         {
-            var key = await _keyRepository.GetByNameAsync(keyName);
+            var key = await _keyRepository.GetByNameAsync(keyName, namespaceId);
             if (key == null) return null;
 
             var versions = await _versionRepository.GetVersionsByKeyIdAsync(key.Id);
@@ -128,9 +129,9 @@ namespace RevloDB.Services
             return version?.Value;
         }
 
-        public async Task<KeyDto> RevertKeyAsync(RevertKeyDto revertKeyDto)
+        public async Task<KeyDto> RevertKeyAsync(RevertKeyDto revertKeyDto, int namespaceId)
         {
-            var revertedKey = await _keyRepository.RevertToVersionAsync(revertKeyDto.KeyName, revertKeyDto.VersionNumber!.Value);
+            var revertedKey = await _keyRepository.RevertToVersionAsync(revertKeyDto.KeyName, revertKeyDto.VersionNumber!.Value, namespaceId);
 
             return new KeyDto
             {

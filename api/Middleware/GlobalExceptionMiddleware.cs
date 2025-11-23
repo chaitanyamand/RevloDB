@@ -77,6 +77,16 @@ namespace RevloDB.Middleware
 
             switch (exception)
             {
+                case UnauthorizedAccessException unauthorizedEx:
+                    _logger.LogWarning("{Method} {Path} - Unauthorized access: {Message}",
+                        method, path, unauthorizedEx.Message);
+                    break;
+
+                case BadHttpRequestException badHttpRequestEx:
+                    _logger.LogWarning("{Method} {Path} - Bad HTTP request: {Message}",
+                        method, path, badHttpRequestEx.Message);
+                    break;
+
                 case KeyNotFoundException keyNotFoundEx:
                     _logger.LogError("{Method} {Path} - Key not found: {Message}",
                         method, path, keyNotFoundEx.Message);
@@ -125,6 +135,20 @@ namespace RevloDB.Middleware
 
             switch (exception)
             {
+                case UnauthorizedAccessException unauthorizedEx:
+                    problemDetails.Status = (int)HttpStatusCode.Unauthorized;
+                    problemDetails.Title = "Unauthorized";
+                    problemDetails.Detail = string.IsNullOrEmpty(unauthorizedEx.Message)
+                        ? "Authentication is required to access this resource."
+                        : unauthorizedEx.Message;
+                    break;
+
+                case BadHttpRequestException badHttpRequestEx:
+                    problemDetails.Status = badHttpRequestEx.StatusCode;
+                    problemDetails.Title = "Bad Request";
+                    problemDetails.Detail = badHttpRequestEx.Message;
+                    break;
+
                 case KeyNotFoundException keyNotFoundEx:
                     problemDetails.Status = (int)HttpStatusCode.NotFound;
                     problemDetails.Title = "Not Found";

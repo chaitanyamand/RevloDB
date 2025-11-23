@@ -1,6 +1,5 @@
 using RevloDB.Extensions;
 using RevloDB.Jobs;
-using RevloDB.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,16 +15,17 @@ builder.Services.AddRevloDbCors();
 // Register the background job
 builder.Services.AddHostedService<CleanupBackgroundJob>();
 
+// Register AutoMapper profiles
+builder.Services.AddMappers();
+
 var app = builder.Build();
 
 // Initialize database
 await app.InitializeDatabaseAsync();
 
-
-// Add the global exception middleware
-app.UseMiddleware<GlobalExceptionMiddleware>();
-
 // Configure pipeline
 app.ConfigureRevloDbPipeline();
 
 app.Run();
+
+public partial class Program { }

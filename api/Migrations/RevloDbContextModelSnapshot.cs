@@ -22,6 +22,77 @@ namespace api.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("RevloDB.Entities.ApiKey", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("NOW()");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("description");
+
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_deleted");
+
+                    b.Property<string>("KeyValue")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("key_value");
+
+                    b.Property<int>("NamespaceId")
+                        .HasColumnType("integer")
+                        .HasColumnName("namespace_id");
+
+                    b.Property<int>("Role")
+                        .HasColumnType("integer")
+                        .HasColumnName("role");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IsDeleted")
+                        .HasDatabaseName("ix_api_keys_is_deleted_true")
+                        .HasFilter("is_deleted = TRUE");
+
+                    b.HasIndex("KeyValue")
+                        .IsUnique()
+                        .HasDatabaseName("ix_api_keys_key_value");
+
+                    b.HasIndex("ExpiresAt", "IsDeleted")
+                        .HasDatabaseName("ix_api_keys_expires_at_is_deleted")
+                        .HasFilter("expires_at IS NOT NULL");
+
+                    b.HasIndex("NamespaceId", "IsDeleted")
+                        .HasDatabaseName("ix_api_keys_namespace_id_is_deleted");
+
+                    b.HasIndex("UserId", "IsDeleted")
+                        .HasDatabaseName("ix_api_keys_user_id_is_deleted");
+
+                    b.ToTable("api_keys", (string)null);
+                });
+
             modelBuilder.Entity("RevloDB.Entities.Key", b =>
                 {
                     b.Property<int>("Id")
@@ -42,7 +113,9 @@ namespace api.Migrations
                         .HasColumnName("current_version_id");
 
                     b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
+                        .HasDefaultValue(false)
                         .HasColumnName("is_deleted");
 
                     b.Property<string>("KeyName")
@@ -50,6 +123,10 @@ namespace api.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)")
                         .HasColumnName("key_name");
+
+                    b.Property<int>("NamespaceId")
+                        .HasColumnType("integer")
+                        .HasColumnName("namespace_id");
 
                     b.HasKey("Id");
 
@@ -60,11 +137,153 @@ namespace api.Migrations
                         .HasDatabaseName("ix_keys_is_deleted_true")
                         .HasFilter("is_deleted = TRUE");
 
-                    b.HasIndex("KeyName")
+                    b.HasIndex("NamespaceId")
+                        .HasDatabaseName("ix_keys_namespace_id");
+
+                    b.HasIndex("KeyName", "NamespaceId")
                         .IsUnique()
-                        .HasDatabaseName("ix_keys_key_name");
+                        .HasDatabaseName("ix_keys_unique_active_key_name_namespace_id")
+                        .HasFilter("is_deleted = FALSE");
 
                     b.ToTable("keys", (string)null);
+                });
+
+            modelBuilder.Entity("RevloDB.Entities.Namespace", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("NOW()");
+
+                    b.Property<int?>("CreatedByUserId")
+                        .HasColumnType("integer")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("description");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_deleted");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("name");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByUserId")
+                        .HasDatabaseName("ix_namespaces_created_by_user_id");
+
+                    b.HasIndex("IsDeleted")
+                        .HasDatabaseName("ix_namespace_is_deleted_true")
+                        .HasFilter("is_deleted = TRUE");
+
+                    b.HasIndex("Name", "CreatedByUserId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_namespaces_name_created_by_user_id")
+                        .HasFilter("is_deleted = FALSE");
+
+                    b.ToTable("namespaces", (string)null);
+                });
+
+            modelBuilder.Entity("RevloDB.Entities.User", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("NOW()");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("email");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_deleted");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("password_hash");
+
+                    b.Property<string>("PasswordSalt")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("password_salt");
+
+                    b.Property<string>("Username")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("username");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IsDeleted")
+                        .HasDatabaseName("ix_users_is_deleted_true")
+                        .HasFilter("is_deleted = TRUE");
+
+                    b.HasIndex("Username")
+                        .IsUnique()
+                        .HasDatabaseName("ix_users_username")
+                        .HasFilter("is_deleted = FALSE");
+
+                    b.ToTable("users", (string)null);
+                });
+
+            modelBuilder.Entity("RevloDB.Entities.UserNamespace", b =>
+                {
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer")
+                        .HasColumnName("user_id");
+
+                    b.Property<int>("NamespaceId")
+                        .HasColumnType("integer")
+                        .HasColumnName("namespace_id");
+
+                    b.Property<DateTime>("GrantedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("granted_at")
+                        .HasDefaultValueSql("NOW()");
+
+                    b.Property<int>("Role")
+                        .HasColumnType("integer")
+                        .HasColumnName("role");
+
+                    b.HasKey("UserId", "NamespaceId");
+
+                    b.HasIndex("NamespaceId")
+                        .HasDatabaseName("ix_user_namespaces_namespace_id");
+
+                    b.ToTable("user_namespaces", (string)null);
                 });
 
             modelBuilder.Entity("RevloDB.Entities.Version", b =>
@@ -97,11 +316,35 @@ namespace api.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("KeyId")
+                        .HasDatabaseName("ix_versions_key_id");
+
                     b.HasIndex("KeyId", "VersionNumber")
                         .IsUnique()
                         .HasDatabaseName("ix_versions_key_id_version_number");
 
                     b.ToTable("versions", (string)null);
+                });
+
+            modelBuilder.Entity("RevloDB.Entities.ApiKey", b =>
+                {
+                    b.HasOne("RevloDB.Entities.Namespace", "Namespace")
+                        .WithMany("ApiKeys")
+                        .HasForeignKey("NamespaceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_api_keys_namespaces_namespace_id");
+
+                    b.HasOne("RevloDB.Entities.User", "User")
+                        .WithMany("ApiKeys")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_api_keys_users_user_id");
+
+                    b.Navigation("Namespace");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("RevloDB.Entities.Key", b =>
@@ -112,7 +355,48 @@ namespace api.Migrations
                         .OnDelete(DeleteBehavior.SetNull)
                         .HasConstraintName("fk_keys_versions_current_version_id");
 
+                    b.HasOne("RevloDB.Entities.Namespace", "Namespace")
+                        .WithMany("Keys")
+                        .HasForeignKey("NamespaceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_keys_namespaces_namespace_id");
+
                     b.Navigation("CurrentVersion");
+
+                    b.Navigation("Namespace");
+                });
+
+            modelBuilder.Entity("RevloDB.Entities.Namespace", b =>
+                {
+                    b.HasOne("RevloDB.Entities.User", "CreatedByUser")
+                        .WithMany("CreatedNamespaces")
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_namespaces_users_created_by_user_id");
+
+                    b.Navigation("CreatedByUser");
+                });
+
+            modelBuilder.Entity("RevloDB.Entities.UserNamespace", b =>
+                {
+                    b.HasOne("RevloDB.Entities.Namespace", "Namespace")
+                        .WithMany("UserNamespaces")
+                        .HasForeignKey("NamespaceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_user_namespaces_namespaces_namespace_id");
+
+                    b.HasOne("RevloDB.Entities.User", "User")
+                        .WithMany("UserNamespaces")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_user_namespaces_users_user_id");
+
+                    b.Navigation("Namespace");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("RevloDB.Entities.Version", b =>
@@ -130,6 +414,24 @@ namespace api.Migrations
             modelBuilder.Entity("RevloDB.Entities.Key", b =>
                 {
                     b.Navigation("Versions");
+                });
+
+            modelBuilder.Entity("RevloDB.Entities.Namespace", b =>
+                {
+                    b.Navigation("ApiKeys");
+
+                    b.Navigation("Keys");
+
+                    b.Navigation("UserNamespaces");
+                });
+
+            modelBuilder.Entity("RevloDB.Entities.User", b =>
+                {
+                    b.Navigation("ApiKeys");
+
+                    b.Navigation("CreatedNamespaces");
+
+                    b.Navigation("UserNamespaces");
                 });
 #pragma warning restore 612, 618
         }

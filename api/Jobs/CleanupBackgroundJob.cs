@@ -65,11 +65,11 @@ namespace RevloDB.Jobs
                     {
                         _logger.LogInformation("Cleanup task completed successfully. " +
                             "Deleted: {Count} keys, Duration: {Duration}ms",
-                            result.DeletedKeysCount, result.Duration.TotalMilliseconds);
+                            result.DeletedCount, result.Duration.TotalMilliseconds);
                     }
                     else
                     {
-                        _logger.LogInformation("Cleanup task completed. Deleted {Count} keys", result.DeletedKeysCount);
+                        _logger.LogInformation("Cleanup task completed. Deleted {Count} keys", result.DeletedCount);
                     }
                 }
                 else

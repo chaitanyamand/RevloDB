@@ -31,3 +31,4 @@ TestResults/
 # Secrets
 appsettings.*.json
 !appsettings.json
+!appsettings.Test.json
