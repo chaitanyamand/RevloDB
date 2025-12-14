@@ -17,6 +17,17 @@ jobs:
       contents: read
 
     steps:
+      - name: Debug - Print Context
+        run: |
+          echo "Event: ${{ github.event_name }}"
+          echo "Action: ${{ github.event.action }}"
+          echo "Commenter: ${{ github.event.comment.user.login }}"
+          echo "Comment: ${{ github.event.comment.body }}"
+          echo "PR Number: ${{ github.event.issue.number }}"
+          echo "PR URL: ${{ github.event.issue.pull_request.url }}"
+          echo "Full event payload:"
+          echo '${{ toJSON(github.event) }}' | jq .
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
