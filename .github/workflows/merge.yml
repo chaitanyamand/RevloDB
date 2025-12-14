@@ -1,5 +1,4 @@
 name: PR Comment Merge
-
 on:
   issue_comment:
     types: [created]
@@ -10,13 +9,11 @@ jobs:
     if: |
       github.event.issue.pull_request && 
       contains(github.event.comment.body, ':mergeBranch')
-
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
       contents: write
       statuses: read
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -48,19 +45,11 @@ jobs:
           script: |
             const ci = require('.github/scripts/merge.js');
             const functions = await ci({ github, context, core });
-
-            // Note: Passing empty SHA, let the script fetch it
-            // This is simpler than trying to extract SHA in YAML
             const requiredChecks = [
               'build-and-test',
               'super-lint'
             ];
-
-            console.log(`Starting merge process for PR #${context.payload.issue.number}`);
-            console.log(`Required checks: ${requiredChecks.join(', ')}`);
-
             try {
-              // Pass empty SHA - script will fetch it
               const result = await functions.waitForStatus(requiredChecks, '');
               core.setOutput('checks_result', result);
             } catch (error) {
@@ -77,7 +66,6 @@ jobs:
             const ci = require('.github/scripts/merge.js');
             const functions = await ci({ github, context, core });
             const prNumber = context.payload.issue.number;
-
             try {
               await functions.autoMerge(prNumber);
               core.setOutput('merge_result', 'success');
