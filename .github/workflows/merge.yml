@@ -1,4 +1,5 @@
 name: PR Comment Merge
+# checkov:skip=CKV2_GHA_1: This workflow needs write permissions for automation
 
 on:
   issue_comment:
