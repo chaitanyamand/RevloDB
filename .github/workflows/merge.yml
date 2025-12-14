@@ -1,5 +1,4 @@
 name: PR Comment Merge
-# checkov:skip=CKV2_GHA_1: This workflow needs write permissions for automation
 
 on:
   issue_comment:
@@ -46,8 +45,8 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           sha: ${{ github.event.issue.pull_request.head.sha }}
           checkName: |
-            build-and-test
-            super-lint
+            RevloDB API Integration Tests / build-and-test
+            Super-Linter / super-lint
 
       - name: Auto-Merge Pull Request
         if: ${{ steps.checks.outputs.result == 'success' }}
