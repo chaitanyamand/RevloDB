@@ -1,6 +1,6 @@
 # Contributing to RevloDB
 
-First off, thank you for considering contributing to RevloDB! We welcome any help, from reporting bugs to submitting new features.
+First off, thank you for considering contributing to RevloDB! We welcome any help, from reporting bugs to submitting new features as well as raising issues.
 
 ## How to Contribute
 
