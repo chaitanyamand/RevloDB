@@ -1,4 +1,3 @@
-// .github/scripts/ci.js
 module.exports = async ({ github, context, core }) => {
     const functions = {
         // 1. Check Commenter Permission
@@ -26,17 +25,71 @@ module.exports = async ({ github, context, core }) => {
             return true;
         },
 
-        // 2. Wait for Required Status Checks
-        waitForStatus: async (requiredChecks, sha) => {
+        // 2. Get PR Head SHA (new function)
+        getPRHeadSHA: async (prNumber) => {
+            console.log(`\n========================================`);
+            console.log(`Fetching PR #${prNumber} details...`);
+            console.log(`========================================`);
+
             const { owner, repo } = context.repo;
 
-            console.log(`========================================`);
+            try {
+                const pr = await github.rest.pulls.get({
+                    owner,
+                    repo,
+                    pull_number: prNumber,
+                });
+
+                const headSha = pr.data.head.sha;
+                const baseSha = pr.data.base.sha;
+
+                console.log(`PR Head SHA: ${headSha}`);
+                console.log(`PR Base SHA: ${baseSha}`);
+                console.log(`PR Head Ref: ${pr.data.head.ref}`);
+                console.log(`PR Base Ref: ${pr.data.base.ref}`);
+                console.log(`PR State: ${pr.data.state}`);
+                console.log(`PR Mergeable: ${pr.data.mergeable}`);
+                console.log(`PR Mergeable State: ${pr.data.mergeable_state}`);
+                console.log(`PR Title: ${pr.data.title}`);
+
+                return headSha;
+            } catch (error) {
+                console.error(`Failed to fetch PR #${prNumber}:`);
+                console.error(`Error: ${error.message}`);
+                throw new Error(`Could not fetch PR details: ${error.message}`);
+            }
+        },
+
+        // 3. Wait for Required Status Checks (updated)
+        waitForStatus: async (requiredChecks, sha) => {
+            const { owner, repo } = context.repo;
+            const prNumber = context.payload.issue.number;
+
+            // If SHA is not provided, fetch it from the PR
+            let commitSha = sha;
+            if (!commitSha || commitSha.trim() === '') {
+                console.log('\nSHA not provided, fetching from PR...');
+                commitSha = await functions.getPRHeadSHA(prNumber);
+            }
+
+            // Validate SHA
+            if (!commitSha || commitSha.trim() === '') {
+                throw new Error('Could not determine commit SHA. Please check PR exists and has a valid head commit.');
+            }
+
+            if (!commitSha.match(/^[a-f0-9]{40}$/)) {
+                console.warn(`SHA format may be invalid: ${commitSha}`);
+            }
+
+            console.log(`\n========================================`);
             console.log(`DEBUG: Starting status check monitoring`);
             console.log(`========================================`);
             console.log(`Repository: ${owner}/${repo}`);
-            console.log(`Commit SHA: ${sha}`);
+            console.log(`Commit SHA: ${commitSha}`);
+            console.log(`SHA Length: ${commitSha.length}`);
             console.log(`Required checks: ${requiredChecks.join(', ')}`);
             console.log(`Event payload comment body: "${context.payload.comment.body}"`);
+            console.log(`PR Number: ${prNumber}`);
 
             // Add debug function to list ALL available statuses/checks
             const listAllStatuses = async () => {
@@ -47,7 +100,7 @@ module.exports = async ({ github, context, core }) => {
                     const statuses = await github.rest.repos.listCommitStatusesForRef({
                         owner,
                         repo,
-                        ref: sha,
+                        ref: commitSha,
                     });
 
                     console.log(`\nSTATUSES API (context field):`);
@@ -67,7 +120,7 @@ module.exports = async ({ github, context, core }) => {
                     const checks = await github.rest.checks.listForRef({
                         owner,
                         repo,
-                        ref: sha,
+                        ref: commitSha,
                     });
 
                     console.log(`\nCHECKS API (name field):`);
@@ -77,8 +130,6 @@ module.exports = async ({ github, context, core }) => {
                         checks.data.check_runs.forEach((check, i) => {
                             console.log(`  [${i}] ${check.name}: ${check.status} (${check.conclusion || 'pending'})`);
                             console.log(`      App: ${check.app?.name || 'N/A'}`);
-                            console.log(`      Started: ${check.started_at}`);
-                            console.log(`      Completed: ${check.completed_at || 'N/A'}`);
                         });
                     }
                 } catch (err) {
@@ -101,7 +152,7 @@ module.exports = async ({ github, context, core }) => {
                     const checks = await github.rest.checks.listForRef({
                         owner,
                         repo,
-                        ref: sha,
+                        ref: commitSha,
                         check_name: checkName,
                     });
 
@@ -118,6 +169,8 @@ module.exports = async ({ github, context, core }) => {
                         } else {
                             console.log(`  Check not completed yet`);
                         }
+                    } else {
+                        console.log(`  Check "${checkName}" not found in Checks API`);
                     }
                 } catch (err) {
                     console.log(`  Checks API query error: ${err.message}`);
@@ -128,7 +181,7 @@ module.exports = async ({ github, context, core }) => {
                     const statuses = await github.rest.repos.listCommitStatusesForRef({
                         owner,
                         repo,
-                        ref: sha,
+                        ref: commitSha,
                     });
 
                     const status = statuses.data.find(s => s.context === checkName);
@@ -154,13 +207,13 @@ module.exports = async ({ github, context, core }) => {
                 }
 
                 const result = foundInChecks || foundInStatuses;
-                console.log(`  Overall result for "${checkName}": ${result ? 'PASS' : 'FAIL/PENDING'}`);
+                console.log(`  Overall result for "${checkName}": ${result ? 'PASS' : 'PENDING'}`);
                 return result;
             };
 
             // Wait logic with timeout
             const maxTime = 15 * 60 * 1000; // 15 minutes
-            const interval = 30000; // 30 seconds (increased for better logs)
+            const interval = 30000; // 30 seconds
             const start = Date.now();
             let iteration = 0;
 
@@ -211,7 +264,7 @@ module.exports = async ({ github, context, core }) => {
             throw new Error('Timeout waiting for required checks after 15 minutes.');
         },
 
-        // 3. Auto-Merge Pull Request
+        // 4. Auto-Merge Pull Request
         autoMerge: async (prNumber) => {
             console.log(`\n========================================`);
             console.log(`Attempting to auto-merge PR #${prNumber}`);
@@ -230,6 +283,11 @@ module.exports = async ({ github, context, core }) => {
                 console.log(`PR Mergeable: ${pr.data.mergeable}`);
                 console.log(`PR Mergeable State: ${pr.data.mergeable_state}`);
                 console.log(`PR Head SHA: ${pr.data.head.sha}`);
+
+                // Check if PR is mergeable
+                if (pr.data.mergeable === false) {
+                    throw new Error(`PR #${prNumber} is not mergeable. Mergeable state: ${pr.data.mergeable_state}`);
+                }
 
                 // Attempt merge
                 const result = await github.rest.pulls.merge({
