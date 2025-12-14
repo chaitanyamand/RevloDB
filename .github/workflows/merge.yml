@@ -7,53 +7,69 @@ on:
 jobs:
   merge_if_all_green:
     name: Verify Statuses and Merge
-
     if: |
       github.event.issue.pull_request && 
       contains(github.event.comment.body, ':mergeBranch')
 
     runs-on: ubuntu-latest
-
     permissions:
       pull-requests: write
       contents: read
 
     steps:
       - name: Check Commenter Permission
+        id: check_perms
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const commenter = context.payload.comment.user.login;
-            const repo = context.repo.repo;
-            const owner = context.repo.owner;
-
-            const { data: permission } = await github.rest.repos.getCollaboratorPermissionLevel({
-              owner,
-              repo,
-              username: commenter,
-            });
-
-            if (permission.permission === 'read' || permission.permission === 'none') {
-              core.setFailed(`User ${commenter} does not have merge permissions (requires 'write' or higher).`);
+            const ci = require('.github/scripts/merge.js');
+            const functions = await ci({ github, context, core });
+            try {
+              await functions.checkPermissions();
+              core.setOutput('permissions_ok', 'true');
+            } catch (error) {
+              core.setFailed(error.message);
             }
 
       - name: Wait for Required Status Checks
-        id: checks
-        uses: "fuxingloh/wait-for-status@v1.0.0"
+        id: wait_checks
+        if: steps.check_perms.outputs.permissions_ok == 'true'
+        uses: actions/github-script@v7
+        env:
+          PR_SHA: ${{ github.event.issue.pull_request.head.sha }}
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          sha: ${{ github.event.issue.pull_request.head.sha }}
-          checkName: |
-            RevloDB API Integration Tests / build-and-test
-            Super-Linter / super-lint
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const ci = require('.github/scripts/merge.js');
+            const functions = await ci({ github, context, core });
+            const requiredChecks = [
+              'RevloDB API Integration Tests / build-and-test',
+              'Super-Linter / super-lint'
+            ];
+            const sha = process.env.PR_SHA;
+
+            try {
+              const result = await functions.waitForStatus(requiredChecks, sha);
+              core.setOutput('checks_result', result);
+            } catch (error) {
+              core.setFailed(error.message);
+            }
 
       - name: Auto-Merge Pull Request
-        if: ${{ steps.checks.outputs.result == 'success' }}
-        uses: pascalgn/automerge-action@v0.15.6
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PULL_REQUEST: ${{ github.event.issue.number }}
-          MERGE_METHOD: merge
-          MERGE_REQUIRED_APPROVALS: false
-          MERGE_STRICT_STATUS_CHECK: false
+        id: auto_merge
+        if: steps.wait_checks.outputs.checks_result == 'success'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const ci = require('.github/scripts/merge.js');
+            const functions = await ci({ github, context, core });
+            const prNumber = context.payload.issue.number;
+
+            try {
+              await functions.autoMerge(prNumber);
+              core.setOutput('merge_result', 'success');
+            } catch (error) {
+              core.setFailed(error.message);
+            }
