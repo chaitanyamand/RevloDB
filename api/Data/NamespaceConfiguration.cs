@@ -65,11 +65,21 @@ namespace RevloDB.Data.Configurations
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("fk_api_keys_namespaces_namespace_id");
 
-            builder.HasMany(n => n.Keys)
-                .WithOne(k => k.Namespace)
-                .HasForeignKey(k => k.NamespaceId)
+            builder.Property(n => n.SnapshotInterval)
+                .HasColumnName("snapshot_interval")
+                .HasDefaultValue(10);
+
+            builder.HasMany(n => n.Branches)
+                .WithOne(b => b.Namespace)
+                .HasForeignKey(b => b.NamespaceId)
                 .OnDelete(DeleteBehavior.Cascade)
-                .HasConstraintName("fk_keys_namespaces_namespace_id");
+                .HasConstraintName("fk_branches_namespaces_namespace_id");
+
+            builder.HasMany(n => n.Commits)
+                .WithOne(c => c.Namespace)
+                .HasForeignKey(c => c.NamespaceId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("fk_commits_namespaces_namespace_id");
         }
     }
 }

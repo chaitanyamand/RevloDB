@@ -4,10 +4,6 @@ namespace RevloDB.Repositories.Interfaces
 {
     public interface ICleanupRepository
     {
-        // Key cleanup operations
-        Task<int> GetMarkedKeysCountAsync(CancellationToken cancellationToken = default);
-        Task<int> DeleteMarkedKeysAsync(CancellationToken cancellationToken = default);
-
         // User cleanup operations
         Task<int> GetMarkedUsersCountAsync(CancellationToken cancellationToken = default);
         Task<int> DeleteMarkedUsersAsync(CancellationToken cancellationToken = default);

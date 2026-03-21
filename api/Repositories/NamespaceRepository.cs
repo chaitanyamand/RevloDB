@@ -142,14 +142,6 @@ namespace RevloDB.Repositories
                     apiKey.IsDeleted = true;
                 }
 
-                var keys = await _context.Keys
-                    .Where(k => k.NamespaceId == id && !k.IsDeleted)
-                    .ToListAsync();
-                foreach (var key in keys)
-                {
-                    key.IsDeleted = true;
-                }
-
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
             }
