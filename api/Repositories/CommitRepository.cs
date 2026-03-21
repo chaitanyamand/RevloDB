@@ -29,24 +29,29 @@ namespace RevloDB.Repositories
                 .FirstOrDefaultAsync(c => c.Id == commitId);
         }
 
+        private const string RecursiveAncestorCte = """
+            SELECT id, parent_commit_id, generation
+            FROM commits WHERE id = {0}
+
+            UNION ALL
+
+            SELECT c.id, c.parent_commit_id, c.generation
+            FROM commits c
+            INNER JOIN ancestor_chain ac ON c.id = ac.parent_commit_id
+            """;
+
         public async Task<Commit?> GetNearestSnapshotAncestorAsync(int commitId)
         {
-            var sql = @"
-                WITH RECURSIVE ancestors AS (
-                    SELECT id, parent_commit_id, generation
-                    FROM commits WHERE id = {0}
-
-                    UNION ALL
-
-                    SELECT c.id, c.parent_commit_id, c.generation
-                    FROM commits c
-                    INNER JOIN ancestors a ON c.id = a.parent_commit_id
+            var sql = $$"""
+                WITH RECURSIVE ancestor_chain AS (
+                    {{RecursiveAncestorCte}}
                 )
-                SELECT a.id AS ""Value""
-                FROM ancestors a
-                INNER JOIN commit_snapshots cs ON cs.commit_id = a.id
-                ORDER BY a.generation DESC
-                LIMIT 1";
+                SELECT ac.id AS "Value"
+                FROM ancestor_chain ac
+                INNER JOIN commit_snapshots cs ON cs.commit_id = ac.id
+                ORDER BY ac.generation DESC
+                LIMIT 1
+                """;
 
             var ids = await _context.Database
                 .SqlQueryRaw<int>(sql, commitId)
@@ -63,19 +68,12 @@ namespace RevloDB.Repositories
 
         public async Task<List<Commit>> GetAncestorChainAsync(int fromCommitId, int toAncestorCommitId)
         {
-            var sql = @"
+            var sql = $$"""
                 WITH RECURSIVE ancestor_chain AS (
-                    SELECT id, parent_commit_id
-                    FROM commits WHERE id = {0}
-
-                    UNION ALL
-
-                    SELECT c.id, c.parent_commit_id
-                    FROM commits c
-                    INNER JOIN ancestor_chain ac ON c.id = ac.parent_commit_id
-                    WHERE ac.id != {1}
+                    {{RecursiveAncestorCte}}
                 )
-                SELECT id AS ""Value"" FROM ancestor_chain WHERE id != {1}";
+                SELECT id AS "Value" FROM ancestor_chain WHERE id != {1}
+                """;
 
             var ids = await _context.Database
                 .SqlQueryRaw<int>(sql, fromCommitId, toAncestorCommitId)
@@ -94,18 +92,12 @@ namespace RevloDB.Repositories
 
         public async Task<List<Commit>> GetAncestorChainToRootAsync(int commitId)
         {
-            var sql = @"
+            var sql = $$"""
                 WITH RECURSIVE ancestor_chain AS (
-                    SELECT id, parent_commit_id
-                    FROM commits WHERE id = {0}
-
-                    UNION ALL
-
-                    SELECT c.id, c.parent_commit_id
-                    FROM commits c
-                    INNER JOIN ancestor_chain ac ON c.id = ac.parent_commit_id
+                    {{RecursiveAncestorCte}}
                 )
-                SELECT id AS ""Value"" FROM ancestor_chain";
+                SELECT id AS "Value" FROM ancestor_chain
+                """;
 
             var ids = await _context.Database
                 .SqlQueryRaw<int>(sql, commitId)
