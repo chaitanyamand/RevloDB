@@ -18,6 +18,8 @@ namespace RevloDB.Entities
 
         public DateTime CreatedAt { get; set; }
 
+        public bool IsDeleted { get; set; } = false;
+
         public ICollection<UnstagedChange> UnstagedChanges { get; set; } = new List<UnstagedChange>();
         public ICollection<BranchState> BranchStates { get; set; } = new List<BranchState>();
     }

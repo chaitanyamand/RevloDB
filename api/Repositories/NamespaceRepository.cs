@@ -61,6 +61,15 @@ namespace RevloDB.Repositories
                 });
                 await _context.SaveChangesAsync();
 
+                _context.Branches.Add(new Branch
+                {
+                    Name = "main",
+                    NamespaceId = ns.Id,
+                    HeadCommitId = null,
+                    CreatedAt = DateTime.UtcNow
+                });
+                await _context.SaveChangesAsync();
+
                 await transaction.CommitAsync();
 
                 return ns;

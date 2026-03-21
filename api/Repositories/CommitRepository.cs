@@ -113,5 +113,47 @@ namespace RevloDB.Repositories
                 .OrderBy(c => c.Generation)
                 .ToListAsync();
         }
+
+        public async Task<Commit?> GetByHashAsync(string hash, int namespaceId)
+        {
+            return await _context.Commits
+                .AsNoTracking()
+                .Include(c => c.Snapshot)
+                .Include(c => c.Changes)
+                .FirstOrDefaultAsync(c => c.Hash == hash && c.NamespaceId == namespaceId);
+        }
+
+        public async Task<List<Commit>> GetHistoryAsync(int startCommitId, int limit)
+        {
+            var sql = $$"""
+                WITH RECURSIVE ancestor_chain AS (
+                    {{RecursiveAncestorCte}}
+                )
+                SELECT id AS "Value" FROM ancestor_chain
+                ORDER BY generation DESC
+                LIMIT {1}
+                """;
+
+            var ids = await _context.Database
+                .SqlQueryRaw<int>(sql, startCommitId, limit)
+                .ToListAsync();
+
+            if (ids.Count == 0)
+                return new List<Commit>();
+
+            return await _context.Commits
+                .AsNoTracking()
+                .Include(c => c.AuthorUser)
+                .Where(c => ids.Contains(c.Id))
+                .OrderByDescending(c => c.Generation)
+                .ToListAsync();
+        }
+
+        public async Task<Commit> CreateAsync(Commit commit)
+        {
+            _context.Commits.Add(commit);
+            await _context.SaveChangesAsync();
+            return commit;
+        }
     }
 }

@@ -46,6 +46,21 @@ namespace RevloDB.Repositories
             return deletedCount;
         }
 
+        public async Task<int> GetMarkedBranchesCountAsync(CancellationToken cancellationToken = default)
+        {
+            return await _context.Branches.CountAsync(b => b.IsDeleted, cancellationToken);
+        }
+
+        public async Task<int> DeleteMarkedBranchesAsync(CancellationToken cancellationToken = default)
+        {
+            var deletedCount = await _context.Branches
+                .Where(b => b.IsDeleted)
+                .ExecuteDeleteAsync(cancellationToken);
+
+            _logger.LogDebug("Deleted {Count} marked branches", deletedCount);
+            return deletedCount;
+        }
+
         public async Task<int> GetMarkedApiKeysCountAsync(CancellationToken cancellationToken = default)
         {
             return await _context.ApiKeys.CountAsync(a => a.IsDeleted, cancellationToken);
@@ -88,6 +103,7 @@ namespace RevloDB.Repositories
             try
             {
                 result.DeletedNamespaces = await DeleteMarkedNamespacesAsync(cancellationToken);
+                result.DeletedBranches = await DeleteMarkedBranchesAsync(cancellationToken);
                 result.DeletedUsers = await DeleteMarkedUsersAsync(cancellationToken);
                 result.DeletedApiKeys = await DeleteMarkedApiKeysAsync(cancellationToken);
 
@@ -96,8 +112,8 @@ namespace RevloDB.Repositories
                     result.DeletedExpiredApiKeys = await DeleteExpiredApiKeysAsync(cancellationToken);
                 }
 
-                _logger.LogInformation("Full cleanup completed. Deleted: {Namespaces} namespaces, {Users} users, {ApiKeys} API keys, {ExpiredApiKeys} expired API keys",
-                    result.DeletedNamespaces, result.DeletedUsers, result.DeletedApiKeys, result.DeletedExpiredApiKeys);
+                _logger.LogInformation("Full cleanup completed. Deleted: {Namespaces} namespaces, {Branches} branches, {Users} users, {ApiKeys} API keys, {ExpiredApiKeys} expired API keys",
+                    result.DeletedNamespaces, result.DeletedBranches, result.DeletedUsers, result.DeletedApiKeys, result.DeletedExpiredApiKeys);
             }
             catch (Exception ex)
             {
@@ -114,6 +130,7 @@ namespace RevloDB.Repositories
             {
                 MarkedUsersCount = await GetMarkedUsersCountAsync(cancellationToken),
                 MarkedNamespacesCount = await GetMarkedNamespacesCountAsync(cancellationToken),
+                MarkedBranchesCount = await GetMarkedBranchesCountAsync(cancellationToken),
                 MarkedApiKeysCount = await GetMarkedApiKeysCountAsync(cancellationToken),
                 ExpiredApiKeysCount = await GetExpiredApiKeysCountAsync(cancellationToken)
             };

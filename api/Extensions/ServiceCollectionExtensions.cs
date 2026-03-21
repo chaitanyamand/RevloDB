@@ -58,6 +58,9 @@ namespace RevloDB.Extensions
             services.AddScoped<IUserNamespaceRepository, UserNamespaceRepository>();
             services.AddScoped<ICleanupRepository, CleanupRepository>();
             services.AddScoped<ICommitRepository, CommitRepository>();
+            services.AddScoped<IBranchRepository, BranchRepository>();
+            services.AddScoped<IBranchStateRepository, BranchStateRepository>();
+            services.AddScoped<IUnstagedChangeRepository, UnstagedChangeRepository>();
 
             // Register services
             services.AddScoped<ICleanupService, CleanupService>();
@@ -67,6 +70,8 @@ namespace RevloDB.Extensions
             services.AddScoped<IUserNamespaceService, UserNamespaceService>();
             services.AddScoped<IUserAuthService, UserAuthService>();
             services.AddScoped<IStateResolutionService, StateResolutionService>();
+            services.AddScoped<IBranchService, BranchService>();
+            services.AddScoped<ICommitService, CommitService>();
 
             services.AddScoped<IDatabaseInitializerService, DatabaseInitializerService>();
 

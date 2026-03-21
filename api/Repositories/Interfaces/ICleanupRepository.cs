@@ -12,6 +12,10 @@ namespace RevloDB.Repositories.Interfaces
         Task<int> GetMarkedNamespacesCountAsync(CancellationToken cancellationToken = default);
         Task<int> DeleteMarkedNamespacesAsync(CancellationToken cancellationToken = default);
 
+        // Branch cleanup operations
+        Task<int> GetMarkedBranchesCountAsync(CancellationToken cancellationToken = default);
+        Task<int> DeleteMarkedBranchesAsync(CancellationToken cancellationToken = default);
+
         // API Key cleanup operations
         Task<int> GetMarkedApiKeysCountAsync(CancellationToken cancellationToken = default);
         Task<int> DeleteMarkedApiKeysAsync(CancellationToken cancellationToken = default);
