@@ -72,6 +72,7 @@ namespace RevloDB.Extensions
             services.AddScoped<IStateResolutionService, StateResolutionService>();
             services.AddScoped<IBranchService, BranchService>();
             services.AddScoped<ICommitService, CommitService>();
+            services.AddScoped<IKeyValueService, KeyValueService>();
 
             services.AddScoped<IDatabaseInitializerService, DatabaseInitializerService>();
 
