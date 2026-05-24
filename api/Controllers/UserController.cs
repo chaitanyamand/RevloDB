@@ -22,7 +22,7 @@ namespace RevloDB.Controllers
         public async Task<ActionResult<UserDto>> GetUser(int userId)
         {
             var currentUserId = ControllerUtil.GetUserIdFromHTTPContext(HttpContext);
-
+            Console.WriteLine("test");
             if (currentUserId != userId)
             {
                 return this.ForbiddenProblem("You can only access your own user information");
