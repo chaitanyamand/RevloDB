@@ -30,6 +30,7 @@ jobs:
 
       - name: Backup scripts
         run: cp -r .github/scripts ${{ runner.temp }}/scripts
+        working-directory: ${{ runner.temp }} 
 
       - name: Get PR Head SHA
         id: pr_info
