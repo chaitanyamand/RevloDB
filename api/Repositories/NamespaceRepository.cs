@@ -2,7 +2,9 @@ using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using RevloDB.Data;
 using RevloDB.Entities;
+using RevloDB.Entities;
 using RevloDB.Repositories.Interfaces;
+using RevloDB.Constants;
 
 namespace RevloDB.Repositories
 {
@@ -58,6 +60,15 @@ namespace RevloDB.Repositories
                     NamespaceId = ns.Id,
                     GrantedAt = DateTime.UtcNow,
                     Role = NamespaceRole.Admin
+                });
+                await _context.SaveChangesAsync();
+
+                _context.Branches.Add(new Branch
+                {
+                    Name = BranchConstants.DefaultMainBranchName,
+                    NamespaceId = ns.Id,
+                    HeadCommitId = null,
+                    CreatedAt = DateTime.UtcNow
                 });
                 await _context.SaveChangesAsync();
 
@@ -140,14 +151,6 @@ namespace RevloDB.Repositories
                 foreach (var apiKey in apiKeys)
                 {
                     apiKey.IsDeleted = true;
-                }
-
-                var keys = await _context.Keys
-                    .Where(k => k.NamespaceId == id && !k.IsDeleted)
-                    .ToListAsync();
-                foreach (var key in keys)
-                {
-                    key.IsDeleted = true;
                 }
 
                 await _context.SaveChangesAsync();

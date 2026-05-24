@@ -13,8 +13,10 @@ namespace RevloDB.Entities
         public DateTime CreatedAt { get; set; }
         public int? CreatedByUserId { get; set; }
         public bool IsDeleted { get; set; } = false;
+        public int SnapshotInterval { get; set; } = 10;
         public User CreatedByUser { get; set; } = null!;
-        public ICollection<Key> Keys { get; set; } = new List<Key>();
+        public ICollection<Branch> Branches { get; set; } = new List<Branch>();
+        public ICollection<Commit> Commits { get; set; } = new List<Commit>();
         public ICollection<UserNamespace> UserNamespaces { get; set; } = new List<UserNamespace>();
         public ICollection<ApiKey> ApiKeys { get; set; } = new List<ApiKey>();
     }

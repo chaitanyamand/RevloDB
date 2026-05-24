@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace RevloDB.DTOs
 {
     public class KeyValueDto
@@ -6,10 +8,16 @@ namespace RevloDB.DTOs
         public string? Value { get; set; }
     }
 
-    public class KeyVersionValueDto
+    public class KeyValueListDto
     {
-        public string KeyName { get; set; } = string.Empty;
-        public int VersionNumber { get; set; }
-        public string? Value { get; set; }
+        public List<KeyValueDto> Keys { get; set; } = new List<KeyValueDto>();
+        public string BranchName { get; set; } = string.Empty;
+        public string? HeadCommitHash { get; set; }
+    }
+
+    public class SetKeyDto
+    {
+        [Required]
+        public string Value { get; set; } = string.Empty;
     }
 }

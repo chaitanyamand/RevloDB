@@ -16,25 +16,6 @@ namespace RevloDB.Repositories
             _logger = logger;
         }
 
-        public async Task<int> GetMarkedKeysCountAsync(CancellationToken cancellationToken = default)
-        {
-            return await _context.Keys.CountAsync(k => k.IsDeleted, cancellationToken);
-        }
-
-        public async Task<int> DeleteMarkedKeysAsync(CancellationToken cancellationToken = default)
-        {
-            await _context.Keys
-                .Where(k => k.IsDeleted)
-                .ExecuteUpdateAsync(s => s.SetProperty(k => k.CurrentVersionId, k => null), cancellationToken);
-
-            var deletedCount = await _context.Keys
-                .Where(k => k.IsDeleted)
-                .ExecuteDeleteAsync(cancellationToken);
-
-            _logger.LogDebug("Deleted {Count} marked keys", deletedCount);
-            return deletedCount;
-        }
-
         public async Task<int> GetMarkedUsersCountAsync(CancellationToken cancellationToken = default)
         {
             return await _context.Users.CountAsync(u => u.IsDeleted, cancellationToken);
@@ -57,15 +38,26 @@ namespace RevloDB.Repositories
 
         public async Task<int> DeleteMarkedNamespacesAsync(CancellationToken cancellationToken = default)
         {
-            await _context.Keys
-                .Where(k => _context.Namespaces.Any(n => n.Id == k.NamespaceId && n.IsDeleted))
-                .ExecuteUpdateAsync(s => s.SetProperty(k => k.CurrentVersionId, k => null), cancellationToken);
-
             var deletedCount = await _context.Namespaces
                 .Where(n => n.IsDeleted)
                 .ExecuteDeleteAsync(cancellationToken);
 
             _logger.LogDebug("Deleted {Count} marked namespaces", deletedCount);
+            return deletedCount;
+        }
+
+        public async Task<int> GetMarkedBranchesCountAsync(CancellationToken cancellationToken = default)
+        {
+            return await _context.Branches.CountAsync(b => b.IsDeleted, cancellationToken);
+        }
+
+        public async Task<int> DeleteMarkedBranchesAsync(CancellationToken cancellationToken = default)
+        {
+            var deletedCount = await _context.Branches
+                .Where(b => b.IsDeleted)
+                .ExecuteDeleteAsync(cancellationToken);
+
+            _logger.LogDebug("Deleted {Count} marked branches", deletedCount);
             return deletedCount;
         }
 
@@ -110,8 +102,8 @@ namespace RevloDB.Repositories
 
             try
             {
-                result.DeletedKeys = await DeleteMarkedKeysAsync(cancellationToken);
                 result.DeletedNamespaces = await DeleteMarkedNamespacesAsync(cancellationToken);
+                result.DeletedBranches = await DeleteMarkedBranchesAsync(cancellationToken);
                 result.DeletedUsers = await DeleteMarkedUsersAsync(cancellationToken);
                 result.DeletedApiKeys = await DeleteMarkedApiKeysAsync(cancellationToken);
 
@@ -120,8 +112,8 @@ namespace RevloDB.Repositories
                     result.DeletedExpiredApiKeys = await DeleteExpiredApiKeysAsync(cancellationToken);
                 }
 
-                _logger.LogInformation("Full cleanup completed. Deleted: {Keys} keys, {Namespaces} namespaces, {Users} users, {ApiKeys} API keys, {ExpiredApiKeys} expired API keys",
-                    result.DeletedKeys, result.DeletedNamespaces, result.DeletedUsers, result.DeletedApiKeys, result.DeletedExpiredApiKeys);
+                _logger.LogInformation("Full cleanup completed. Deleted: {Namespaces} namespaces, {Branches} branches, {Users} users, {ApiKeys} API keys, {ExpiredApiKeys} expired API keys",
+                    result.DeletedNamespaces, result.DeletedBranches, result.DeletedUsers, result.DeletedApiKeys, result.DeletedExpiredApiKeys);
             }
             catch (Exception ex)
             {
@@ -136,9 +128,9 @@ namespace RevloDB.Repositories
         {
             return new CleanupSummary
             {
-                MarkedKeysCount = await GetMarkedKeysCountAsync(cancellationToken),
                 MarkedUsersCount = await GetMarkedUsersCountAsync(cancellationToken),
                 MarkedNamespacesCount = await GetMarkedNamespacesCountAsync(cancellationToken),
+                MarkedBranchesCount = await GetMarkedBranchesCountAsync(cancellationToken),
                 MarkedApiKeysCount = await GetMarkedApiKeysCountAsync(cancellationToken),
                 ExpiredApiKeysCount = await GetExpiredApiKeysCountAsync(cancellationToken)
             };

@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using RevloDB.Data;
@@ -11,9 +12,11 @@ using RevloDB.Data;
 namespace api.Migrations
 {
     [DbContext(typeof(RevloDbContext))]
-    partial class RevloDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260321080615_GitLikeVersioningSystem")]
+    partial class GitLikeVersioningSystem
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -111,9 +114,6 @@ namespace api.Migrations
                     b.Property<int?>("HeadCommitId")
                         .HasColumnType("integer")
                         .HasColumnName("head_commit_id");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean");
 
                     b.Property<string>("Name")
                         .IsRequired()

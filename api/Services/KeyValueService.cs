@@ -1,4 +1,5 @@
 using RevloDB.DTOs;
+using RevloDB.Entities;
 using RevloDB.Repositories.Interfaces;
 using RevloDB.Services.Interfaces;
 
@@ -6,141 +7,106 @@ namespace RevloDB.Services
 {
     public class KeyValueService : IKeyValueService
     {
-        private readonly IKeyRepository _keyRepository;
-        private readonly IVersionRepository _versionRepository;
+        private readonly IBranchRepository _branchRepository;
+        private readonly IStateResolutionService _stateResolutionService;
+        private readonly IUnstagedChangeRepository _unstagedChangeRepository;
 
-        public KeyValueService(IKeyRepository keyRepository, IVersionRepository versionRepository)
+        public KeyValueService(
+            IBranchRepository branchRepository,
+            IStateResolutionService stateResolutionService,
+            IUnstagedChangeRepository unstagedChangeRepository)
         {
-            _keyRepository = keyRepository;
-            _versionRepository = versionRepository;
+            _branchRepository = branchRepository;
+            _stateResolutionService = stateResolutionService;
+            _unstagedChangeRepository = unstagedChangeRepository;
         }
 
-        public async Task<KeyDto?> GetKeyAsync(string keyName, int namespaceId)
+        private async Task<Branch> GetBranchByNameAsync(string branchName, int namespaceId)
         {
-            var key = await _keyRepository.GetByNameAsync(keyName, namespaceId);
-            if (key == null) return null;
+            var branch = await _branchRepository.GetByNameAsync(branchName, namespaceId);
+            if (branch == null)
+                throw new KeyNotFoundException($"Branch '{branchName}' not found.");
+            return branch;
+        }
 
-            return new KeyDto
+        public async Task<KeyValueDto?> GetKeyAsync(string branchName, string keyName, int namespaceId)
+        {
+            var branch = await GetBranchByNameAsync(branchName, namespaceId);
+            var value = await _stateResolutionService.GetKeyValueAsync(branch.Id, keyName);
+
+            if (value == null)
+                return null;
+
+            return new KeyValueDto
             {
-                Id = key.Id,
-                KeyName = key.KeyName,
-                CurrentValue = key.CurrentVersion?.Value,
-                CurrentVersionNumber = key.CurrentVersion?.VersionNumber,
-                CreatedAt = key.CreatedAt
+                KeyName = keyName,
+                Value = value
             };
         }
 
-        public async Task<string?> GetValueAsync(string keyName, int namespaceId)
+        public async Task<KeyValueListDto> GetAllKeysAsync(string branchName, int namespaceId)
         {
-            var key = await _keyRepository.GetByNameAsync(keyName, namespaceId);
-            return key?.CurrentVersion?.Value;
-        }
+            var branch = await GetBranchByNameAsync(branchName, namespaceId);
+            var kvDict = await _stateResolutionService.GetAllKeyValuesAsync(branch.Id);
 
-        public async Task<IEnumerable<KeyDto>> GetAllKeysAsync(int namespaceId)
-        {
-            var keys = await _keyRepository.GetAllAsync(namespaceId);
-            return keys.Select(k => new KeyDto
+            var keysList = kvDict.Select(kv => new KeyValueDto
             {
-                Id = k.Id,
-                KeyName = k.KeyName,
-                CurrentValue = k.CurrentVersion?.Value,
-                CurrentVersionNumber = k.CurrentVersion?.VersionNumber,
-                CreatedAt = k.CreatedAt
-            });
-        }
+                KeyName = kv.Key,
+                Value = kv.Value
+            }).OrderBy(k => k.KeyName).ToList();
 
-        public async Task<KeyDto> CreateKeyAsync(CreateKeyDto createKeyDto, int namespaceId)
-        {
-            var key = await _keyRepository.CreateKeyWithVersionAsync(
-                createKeyDto.KeyName,
-                createKeyDto.Value,
-                namespaceId
-            );
+            string? headHash = branch.HeadCommit?.Hash;
 
-            return new KeyDto
+            return new KeyValueListDto
             {
-                Id = key.Id,
-                KeyName = key.KeyName,
-                CurrentValue = key.CurrentVersion?.Value,
-                CurrentVersionNumber = key.CurrentVersion?.VersionNumber,
-                CreatedAt = key.CreatedAt
+                Keys = keysList,
+                BranchName = branchName,
+                HeadCommitHash = headHash
             };
         }
 
-        public async Task<KeyDto> UpdateKeyAsync(string keyName, UpdateKeyDto updateKeyDto, int namespaceId)
+        public async Task SetKeyAsync(string branchName, string keyName, string value, int namespaceId)
         {
-            var updatedKey = await _keyRepository.AddNewVersionAsync(keyName, updateKeyDto.Value, namespaceId);
+            var branch = await GetBranchByNameAsync(branchName, namespaceId);
 
-            return new KeyDto
+            var change = new UnstagedChange
             {
-                Id = updatedKey.Id,
-                KeyName = updatedKey.KeyName,
-                CurrentValue = updatedKey.CurrentVersion?.Value,
-                CurrentVersionNumber = updatedKey.CurrentVersion?.VersionNumber,
-                CreatedAt = updatedKey.CreatedAt
+                BranchId = branch.Id,
+                KeyName = keyName,
+                Value = value,
+                Action = ChangeAction.Modified,
+                UpdatedAt = DateTime.UtcNow
             };
+
+            await _unstagedChangeRepository.UpsertAsync(change);
         }
 
-        public async Task DeleteKeyAsync(string keyName, int namespaceId)
+        public async Task DeleteKeyAsync(string branchName, string keyName, int namespaceId)
         {
-            var deleted = await _keyRepository.DeleteByNameAsync(keyName, namespaceId);
-            if (!deleted)
+            var branch = await GetBranchByNameAsync(branchName, namespaceId);
+
+            var change = new UnstagedChange
             {
-                throw new KeyNotFoundException($"Key '{keyName}' not found");
-            }
-        }
-
-        public async Task RestoreKeyAsync(string keyName, int namespaceId)
-        {
-            var restored = await _keyRepository.RestoreByNameAsync(keyName, namespaceId);
-            if (!restored)
-            {
-                throw new KeyNotFoundException($"Key '{keyName}' not found or is not deleted");
-            }
-        }
-
-        public async Task<IEnumerable<VersionDto>> GetKeyHistoryAsync(string keyName, int namespaceId)
-        {
-            var key = await _keyRepository.GetByNameAsync(keyName, namespaceId);
-            if (key == null)
-            {
-                throw new KeyNotFoundException($"Key '{keyName}' not found");
-            }
-
-            var versions = await _versionRepository.GetVersionsByKeyIdAsync(key.Id);
-            return versions.Select(v => new VersionDto
-            {
-                Id = v.Id,
-                Value = v.Value,
-                Timestamp = v.Timestamp,
-                VersionNumber = v.VersionNumber,
-                KeyId = v.KeyId
-            });
-        }
-
-        public async Task<string?> GetValueAtVersionAsync(string keyName, int versionNumber, int namespaceId)
-        {
-            var key = await _keyRepository.GetByNameAsync(keyName, namespaceId);
-            if (key == null) return null;
-
-            var versions = await _versionRepository.GetVersionsByKeyIdAsync(key.Id);
-            var version = versions.FirstOrDefault(v => v.VersionNumber == versionNumber);
-
-            return version?.Value;
-        }
-
-        public async Task<KeyDto> RevertKeyAsync(RevertKeyDto revertKeyDto, int namespaceId)
-        {
-            var revertedKey = await _keyRepository.RevertToVersionAsync(revertKeyDto.KeyName, revertKeyDto.VersionNumber!.Value, namespaceId);
-
-            return new KeyDto
-            {
-                Id = revertedKey.Id,
-                KeyName = revertedKey.KeyName,
-                CurrentValue = revertedKey.CurrentVersion?.Value,
-                CurrentVersionNumber = revertedKey.CurrentVersion?.VersionNumber,
-                CreatedAt = revertedKey.CreatedAt
+                BranchId = branch.Id,
+                KeyName = keyName,
+                Value = null,
+                Action = ChangeAction.Deleted,
+                UpdatedAt = DateTime.UtcNow
             };
+
+            await _unstagedChangeRepository.UpsertAsync(change);
+        }
+
+        public async Task<List<KeyValueDto>> GetUnstagedChangesAsync(string branchName, int namespaceId)
+        {
+            var branch = await GetBranchByNameAsync(branchName, namespaceId);
+            var unstaged = await _unstagedChangeRepository.GetAllForBranchAsync(branch.Id);
+
+            return unstaged.Select(u => new KeyValueDto
+            {
+                KeyName = u.KeyName,
+                Value = u.Action == ChangeAction.Deleted ? null : u.Value
+            }).OrderBy(k => k.KeyName).ToList();
         }
     }
 }

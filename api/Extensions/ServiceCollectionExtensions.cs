@@ -52,13 +52,15 @@ namespace RevloDB.Extensions
             });
 
             // Register repositories
-            services.AddScoped<IKeyRepository, KeyRepository>();
-            services.AddScoped<IVersionRepository, VersionRepository>();
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<INamespaceRepository, NamespaceRepository>();
             services.AddScoped<IAPIKeyRepository, APIKeyRepository>();
             services.AddScoped<IUserNamespaceRepository, UserNamespaceRepository>();
             services.AddScoped<ICleanupRepository, CleanupRepository>();
+            services.AddScoped<ICommitRepository, CommitRepository>();
+            services.AddScoped<IBranchRepository, BranchRepository>();
+            services.AddScoped<IBranchStateRepository, BranchStateRepository>();
+            services.AddScoped<IUnstagedChangeRepository, UnstagedChangeRepository>();
 
             // Register services
             services.AddScoped<ICleanupService, CleanupService>();
@@ -66,8 +68,12 @@ namespace RevloDB.Extensions
             services.AddScoped<IAPIKeyService, APIKeyService>();
             services.AddScoped<INamespaceService, NamespaceService>();
             services.AddScoped<IUserNamespaceService, UserNamespaceService>();
-            services.AddScoped<IKeyValueService, KeyValueService>();
             services.AddScoped<IUserAuthService, UserAuthService>();
+            services.AddScoped<IStateResolutionService, StateResolutionService>();
+            services.AddScoped<IBranchService, BranchService>();
+            services.AddScoped<IMergeService, MergeService>();
+            services.AddScoped<ICommitService, CommitService>();
+            services.AddScoped<IKeyValueService, KeyValueService>();
 
             services.AddScoped<IDatabaseInitializerService, DatabaseInitializerService>();
 

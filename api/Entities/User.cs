@@ -19,5 +19,6 @@ namespace RevloDB.Entities
         public ICollection<Namespace> CreatedNamespaces { get; set; } = new List<Namespace>();
         public ICollection<UserNamespace> UserNamespaces { get; set; } = new List<UserNamespace>();
         public ICollection<ApiKey> ApiKeys { get; set; } = new List<ApiKey>();
+        public ICollection<Commit> AuthoredCommits { get; set; } = new List<Commit>();
     }
 }
