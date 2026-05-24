@@ -6,6 +6,7 @@ on:
 
 permissions:
   contents: read
+  statuses: write
 
 jobs:
   build-and-test:
@@ -33,7 +34,16 @@ jobs:
               repo: context.repo.repo,
               pull_number: context.issue.number
             });
-            core.setOutput('sha', pr.data.head.sha);
+            const sha = pr.data.head.sha;
+            core.setOutput('sha', sha);
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: sha,
+              state: 'pending',
+              description: 'Tests are running...',
+              context: 'RevloDB API Integration Tests'
+            });
 
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -53,3 +63,20 @@ jobs:
 
       - name: Run tests
         run: dotnet test --configuration Release --no-build --verbosity normal
+
+      - name: Report Status
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const sha = '${{ steps.pr_info.outputs.sha }}';
+            const state = '${{ job.status }}' === 'success' ? 'success' : 'failure';
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: sha,
+              state: state,
+              description: `Tests completed with status: ${state}`,
+              context: 'RevloDB API Integration Tests'
+            });
