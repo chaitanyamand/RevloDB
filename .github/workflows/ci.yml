@@ -1,13 +1,13 @@
 name: RevloDB API Integration Tests
-
+ 
 on:
   issue_comment:
     types: [created]
-
+ 
 permissions:
   contents: read
   statuses: write
-
+ 
 jobs:
   build-and-test:
     if: |
@@ -23,60 +23,47 @@ jobs:
       run:
         working-directory: api.tests
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+ 
       - name: Get PR Head SHA
         id: pr_info
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const pr = await github.rest.pulls.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: context.issue.number
-            });
-            const sha = pr.data.head.sha;
-            core.setOutput('sha', sha);
-            await github.rest.repos.createCommitStatus({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              sha: sha,
-              state: 'pending',
-              description: 'Tests are running...',
-              context: 'RevloDB API Integration Tests'
-            });
-
+            const ci = require('.github/scripts/ciStatus.js');
+            const functions = await ci({ github, context, core }, 'RevloDB API Integration Tests', 'Tests are running...', 'Tests completed with status');
+            await functions.getPRHeadSHAWithStatus();
+ 
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           ref: ${{ steps.pr_info.outputs.sha }}
-
+ 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0.x
-
+ 
       - name: Restore dependencies
         run: dotnet restore
-
+ 
       - name: Build
         run: dotnet build --configuration Release --no-restore
-
+ 
       - name: Run tests
         run: dotnet test --configuration Release --no-build --verbosity normal
-
+ 
       - name: Report Status
         if: always()
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const sha = '${{ steps.pr_info.outputs.sha }}';
-            const state = '${{ job.status }}' === 'success' ? 'success' : 'failure';
-            await github.rest.repos.createCommitStatus({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              sha: sha,
-              state: state,
-              description: `Tests completed with status: ${state}`,
-              context: 'RevloDB API Integration Tests'
-            });
+            const ci = require('.github/scripts/ciStatus.js');
+            const functions = await ci({ github, context, core }, 'RevloDB API Integration Tests', 'Tests are running...', 'Tests completed with status');
+            await functions.reportStatus('${{ steps.pr_info.outputs.sha }}', '${{ job.status }}');

@@ -1,13 +1,13 @@
 name: Super-Linter
-
+ 
 on:
   issue_comment:
     types: [created]
-
+ 
 permissions:
   contents: read
   statuses: write
-
+ 
 jobs:
   super-lint:
     if: |
@@ -20,54 +20,41 @@ jobs:
       )
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+ 
       - name: Get PR Head SHA
         id: pr_info
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const pr = await github.rest.pulls.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: context.issue.number
-            });
-            const sha = pr.data.head.sha;
-            core.setOutput('sha', sha);
-            await github.rest.repos.createCommitStatus({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              sha: sha,
-              state: 'pending',
-              description: 'Linter has started',
-              context: 'Super-Linter'
-            });
-
+            const ci = require('.github/scripts/ciStatus.js');
+            const functions = await ci({ github, context, core }, 'Super-Linter', 'Linter has started', 'Linter completed with status');
+            await functions.getPRHeadSHAWithStatus();
+ 
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
           ref: ${{ steps.pr_info.outputs.sha }}
           fetch-depth: 0
-
+ 
       - name: Run Super-Linter
         uses: github/super-linter@v6
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DEFAULT_BRANCH: main
           GITHUB_SHA: ${{ steps.pr_info.outputs.sha }}
-
+ 
       - name: Report Status
         if: always()
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const sha = '${{ steps.pr_info.outputs.sha }}';
-            const state = '${{ job.status }}' === 'success' ? 'success' : 'failure';
-            await github.rest.repos.createCommitStatus({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              sha: sha,
-              state: state,
-              description: `Linter completed with status: ${state}`,
-              context: 'Super-Linter'
-            });
+            const ci = require('.github/scripts/ciStatus.js');
+            const functions = await ci({ github, context, core }, 'Super-Linter', 'Linter has started', 'Linter completed with status');
+            await functions.reportStatus('${{ steps.pr_info.outputs.sha }}', '${{ job.status }}');
