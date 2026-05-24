@@ -4,6 +4,9 @@ on:
   issue_comment:
     types: [created]
 
+permissions:
+  contents: read
+
 jobs:
   super-lint:
     if: |
@@ -15,8 +18,6 @@ jobs:
         github.event.comment.author_association == 'OWNER'
       )
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
     steps:
       - name: Get PR Head SHA
         id: pr_info
@@ -29,16 +30,7 @@ jobs:
               repo: context.repo.repo,
               pull_number: context.issue.number
             });
-            const sha = pr.data.head.sha;
-            core.setOutput('sha', sha);
-            await github.rest.repos.createCommitStatus({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              sha: sha,
-              state: 'pending',
-              description: 'Linter has started',
-              context: 'Super-Linter'
-            });
+            core.setOutput('sha', pr.data.head.sha);
 
       - name: Checkout Code
         uses: actions/checkout@v4
