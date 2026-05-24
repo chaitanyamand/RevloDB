@@ -31,6 +31,17 @@ jobs:
       - name: Backup scripts
         run: cp -r .github/scripts ${{ runner.temp }}/scripts
         working-directory: ${{ runner.temp }} 
+      
+      - name: Debug script backup        # ← add this temporarily
+        run: |
+          echo "RUNNER_TEMP: $RUNNER_TEMP"
+          echo "Listing RUNNER_TEMP:"
+          ls -la $RUNNER_TEMP
+          echo "Listing scripts dir (if exists):"
+          ls -la $RUNNER_TEMP/scripts || echo "scripts dir NOT found"
+          echo "Listing workspace .github:"
+          ls -la ${{ github.workspace }}/.github/scripts || echo ".github/scripts NOT found in workspace"
+        working-directory: ${{ runner.temp }}
 
       - name: Get PR Head SHA
         id: pr_info
