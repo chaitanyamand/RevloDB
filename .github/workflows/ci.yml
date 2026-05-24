@@ -4,11 +4,11 @@ on:
   issue_comment:
     types: [created]
 
+permissions:
+  contents: read
+
 jobs:
   build-and-test:
-    permissions:
-      contents: read
-      statuses: write
     if: |
       github.event.issue.pull_request &&
       contains(github.event.comment.body, ':runTests') &&
@@ -22,27 +22,18 @@ jobs:
       run:
         working-directory: api.tests
     steps:
-      - name: Checkout scripts
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.repository.default_branch }}
-          sparse-checkout: .github/scripts
-
-      - name: Backup scripts
-        run: cp -r .github/scripts ${{ runner.temp }}/scripts
-
       - name: Get PR Head SHA
         id: pr_info
         uses: actions/github-script@v7
-        env:
-          RUN_ID: ${{ github.run_id }}
-          CONTEXT_NAME: 'RevloDB API Integration Tests'
-          DESCRIPTION: 'Tests are running...'
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const script = require(`${process.env.RUNNER_TEMP}/scripts/get_pr_sha_and_set_pending.js`);
-            await script({github, context, core});
+            const pr = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number
+            });
+            core.setOutput('sha', pr.data.head.sha);
 
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -52,7 +43,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 8.0.405
+          dotnet-version: 8.0.x
 
       - name: Restore dependencies
         run: dotnet restore
@@ -62,18 +53,3 @@ jobs:
 
       - name: Run tests
         run: dotnet test --configuration Release --no-build --verbosity normal
-
-      - name: Report Status
-        if: always()
-        uses: actions/github-script@v7
-        env:
-          RUN_ID: ${{ github.run_id }}
-          SHA: ${{ steps.pr_info.outputs.sha }}
-          JOB_STATUS: ${{ job.status }}
-          CONTEXT_NAME: 'RevloDB API Integration Tests'
-          DESCRIPTION_PREFIX: 'Tests completed with status'
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const script = require(`${process.env.RUNNER_TEMP}/scripts/report_status.js`);
-            await script({github, context});

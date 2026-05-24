@@ -4,6 +4,9 @@ on:
   issue_comment:
     types: [created]
 
+permissions:
+  contents: read
+
 jobs:
   super-lint:
     if: |
@@ -15,31 +18,19 @@ jobs:
         github.event.comment.author_association == 'OWNER'
       )
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      statuses: write
     steps:
-      - name: Checkout scripts
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.repository.default_branch }}
-          sparse-checkout: .github/scripts
-
-      - name: Backup scripts
-        run: cp -r .github/scripts ${{ runner.temp }}/scripts
-
       - name: Get PR Head SHA
         id: pr_info
         uses: actions/github-script@v7
-        env:
-          RUN_ID: ${{ github.run_id }}
-          CONTEXT_NAME: 'Super-Linter'
-          DESCRIPTION: 'Linter has started'
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const script = require(`${process.env.RUNNER_TEMP}/scripts/get_pr_sha_and_set_pending.js`);
-            await script({github, context, core});
+            const pr = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number
+            });
+            core.setOutput('sha', pr.data.head.sha);
 
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -53,18 +44,3 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DEFAULT_BRANCH: main
           GITHUB_SHA: ${{ steps.pr_info.outputs.sha }}
-
-      - name: Report Status
-        if: always()
-        uses: actions/github-script@v7
-        env:
-          RUN_ID: ${{ github.run_id }}
-          SHA: ${{ steps.pr_info.outputs.sha }}
-          JOB_STATUS: ${{ job.status }}
-          CONTEXT_NAME: 'Super-Linter'
-          DESCRIPTION_PREFIX: 'Linter completed with status'
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const script = require(`${process.env.RUNNER_TEMP}/scripts/report_status.js`);
-            await script({github, context});
