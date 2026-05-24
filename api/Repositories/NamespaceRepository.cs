@@ -2,7 +2,9 @@ using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using RevloDB.Data;
 using RevloDB.Entities;
+using RevloDB.Entities;
 using RevloDB.Repositories.Interfaces;
+using RevloDB.Constants;
 
 namespace RevloDB.Repositories
 {
@@ -63,7 +65,7 @@ namespace RevloDB.Repositories
 
                 _context.Branches.Add(new Branch
                 {
-                    Name = "main",
+                    Name = BranchConstants.DefaultMainBranchName,
                     NamespaceId = ns.Id,
                     HeadCommitId = null,
                     CreatedAt = DateTime.UtcNow

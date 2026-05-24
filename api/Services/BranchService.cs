@@ -1,4 +1,5 @@
 using AutoMapper;
+using RevloDB.Constants;
 using RevloDB.DTOs;
 using RevloDB.Entities;
 using RevloDB.Repositories.Interfaces;
@@ -59,7 +60,7 @@ namespace RevloDB.Services
 
         public async Task DeleteBranchAsync(string branchName, int namespaceId)
         {
-            if (branchName.Equals("main", StringComparison.OrdinalIgnoreCase))
+            if (branchName.Equals(BranchConstants.DefaultMainBranchName, StringComparison.OrdinalIgnoreCase))
             {
                 throw new InvalidOperationException("Cannot delete the 'main' branch.");
             }

@@ -29,16 +29,18 @@ namespace RevloDB.Repositories
                 .FirstOrDefaultAsync(c => c.Id == commitId);
         }
 
-        private const string RecursiveAncestorCte = """
-            SELECT id, parent_commit_id, generation
-            FROM commits WHERE id = {0}
+        private static string GetRecursiveAncestorCteBody(string cteName, string paramPlaceholder) => $$"""
+            SELECT id, parent_commit_id, merge_parent_commit_id, generation
+            FROM commits WHERE id = {{paramPlaceholder}}
 
-            UNION ALL
+            UNION
 
-            SELECT c.id, c.parent_commit_id, c.generation
+            SELECT c.id, c.parent_commit_id, c.merge_parent_commit_id, c.generation
             FROM commits c
-            INNER JOIN ancestor_chain ac ON c.id = ac.parent_commit_id
+            INNER JOIN {{cteName}} ac ON c.id = ac.parent_commit_id OR c.id = ac.merge_parent_commit_id
             """;
+
+        private static readonly string RecursiveAncestorCte = GetRecursiveAncestorCteBody("ancestor_chain", "{0}");
 
         public async Task<Commit?> GetNearestSnapshotAncestorAsync(int commitId)
         {
@@ -46,11 +48,13 @@ namespace RevloDB.Repositories
                 WITH RECURSIVE ancestor_chain AS (
                     {{RecursiveAncestorCte}}
                 )
-                SELECT ac.id AS "Value"
-                FROM ancestor_chain ac
-                INNER JOIN commit_snapshots cs ON cs.commit_id = ac.id
-                ORDER BY ac.generation DESC
-                LIMIT 1
+                SELECT "Value" FROM (
+                    SELECT ac.id AS "Value", ac.generation
+                    FROM ancestor_chain ac
+                    INNER JOIN commit_snapshots cs ON cs.commit_id = ac.id
+                    ORDER BY ac.generation DESC, ac.id DESC
+                    LIMIT 1
+                ) t
                 """;
 
             var ids = await _context.Database
@@ -87,6 +91,7 @@ namespace RevloDB.Repositories
                 .Include(c => c.Changes)
                 .Where(c => ids.Contains(c.Id))
                 .OrderBy(c => c.Generation)
+                .ThenBy(c => c.Id)
                 .ToListAsync();
         }
 
@@ -111,6 +116,7 @@ namespace RevloDB.Repositories
                 .Include(c => c.Changes)
                 .Where(c => ids.Contains(c.Id))
                 .OrderBy(c => c.Generation)
+                .ThenBy(c => c.Id)
                 .ToListAsync();
         }
 
@@ -129,9 +135,12 @@ namespace RevloDB.Repositories
                 WITH RECURSIVE ancestor_chain AS (
                     {{RecursiveAncestorCte}}
                 )
-                SELECT id AS "Value" FROM ancestor_chain
-                ORDER BY generation DESC
-                LIMIT {1}
+                SELECT "Value" FROM (
+                    SELECT id AS "Value", generation
+                    FROM ancestor_chain
+                    ORDER BY generation DESC, id DESC
+                    LIMIT {1}
+                ) t
                 """;
 
             var ids = await _context.Database
@@ -146,6 +155,7 @@ namespace RevloDB.Repositories
                 .Include(c => c.AuthorUser)
                 .Where(c => ids.Contains(c.Id))
                 .OrderByDescending(c => c.Generation)
+                .ThenByDescending(c => c.Id)
                 .ToListAsync();
         }
 
@@ -154,6 +164,31 @@ namespace RevloDB.Repositories
             _context.Commits.Add(commit);
             await _context.SaveChangesAsync();
             return commit;
+        }
+
+        public async Task<List<int>> FindLCACandidatesAsync(int commitId1, int commitId2)
+        {
+            var sql = $$"""
+                WITH RECURSIVE ancestors1 AS (
+                    {{GetRecursiveAncestorCteBody("ancestors1", "{0}")}}
+                ),
+                ancestors2 AS (
+                    {{GetRecursiveAncestorCteBody("ancestors2", "{1}")}}
+                )
+                SELECT "Value" FROM (
+                    SELECT a1.id AS "Value", a1.generation
+                    FROM ancestors1 a1
+                    INNER JOIN ancestors2 a2 ON a1.id = a2.id
+                    GROUP BY a1.id, a1.generation
+                    ORDER BY a1.generation DESC, a1.id DESC
+                ) t
+                """;
+
+            var ids = await _context.Database
+                .SqlQueryRaw<int>(sql, commitId1, commitId2)
+                .ToListAsync();
+
+            return ids;
         }
     }
 }

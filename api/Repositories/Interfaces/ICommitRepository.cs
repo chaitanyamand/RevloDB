@@ -12,5 +12,6 @@ namespace RevloDB.Repositories.Interfaces
         Task<Commit?> GetByHashAsync(string hash, int namespaceId);
         Task<List<Commit>> GetHistoryAsync(int startCommitId, int limit);
         Task<Commit> CreateAsync(Commit commit);
+        Task<List<int>> FindLCACandidatesAsync(int commitId1, int commitId2);
     }
 }

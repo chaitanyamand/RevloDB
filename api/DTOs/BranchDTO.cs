@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using RevloDB.Constants;
 
 namespace RevloDB.DTOs
 {
@@ -16,6 +17,6 @@ namespace RevloDB.DTOs
         [StringLength(100, MinimumLength = 1, ErrorMessage = "Branch name must be between 1 and 100 characters")]
         public string Name { get; set; } = string.Empty;
 
-        public string SourceBranchName { get; set; } = "main";
+        public string SourceBranchName { get; set; } = BranchConstants.DefaultMainBranchName;
     }
 }
