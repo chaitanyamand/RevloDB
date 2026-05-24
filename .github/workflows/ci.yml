@@ -31,6 +31,7 @@ jobs:
 
       - name: Backup scripts
         run: cp -r $GITHUB_WORKSPACE/.github/scripts $RUNNER_TEMP/scripts
+        working-directory: ${{ github.workspace }}
 
       - name: Get PR Head SHA
         id: pr_info
